@@ -171,12 +171,17 @@
                 let usersData = [];
                 for (const userDoc of snapshot.docs) {
                     const profileDocRef = doc(dbInstance, `artifacts/${currentAppId}/users/${userDoc.id}/profile/data`);
-                    const profileDocSnap = await getDoc(profileDocRef);
-                    if (profileDocSnap.exists()) {
-                        usersData.push({
-                            userId: userDoc.id,
-                            points: profileDocSnap.data().points || 0
-                        });
+                    try {
+                        const profileDocSnap = await getDoc(profileDocRef);
+                        if (profileDocSnap.exists()) {
+                            usersData.push({
+                                userId: userDoc.id,
+                                points: profileDocSnap.data().points || 0
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching profile for user ${userDoc.id}:`, error);
+                        // Log the error but don't stop the leaderboard from loading
                     }
                 }
 
@@ -200,7 +205,12 @@
                 leaderboardList.appendChild(ol);
             }, (error) => {
                 console.error("Error fetching leaderboard:", error);
-                document.getElementById('leaderboardList').innerHTML = '<p class="text-red-500">Error loading leaderboard.</p>';
+                // More specific error message for permissions
+                if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
+                    leaderboardList.innerHTML = '<p class="text-red-500">Error loading leaderboard: Permission denied. Please ensure your Firebase Security Rules allow reading user profiles.</p>';
+                } else {
+                    leaderboardList.innerHTML = '<p class="text-red-500">Error loading leaderboard.</p>';
+                }
             });
         }
 
@@ -683,7 +693,7 @@
             "${text}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiKey = ""; // Set apiKey to empty string for Canvas environment
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -731,7 +741,7 @@
             Counter-Narrative:` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiKey = ""; // Set apiKey to empty string for Canvas environment
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -778,7 +788,7 @@
             "${text}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiKey = ""; // Set apiKey to empty string for Canvas environment
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -1059,7 +1069,7 @@
             User query/text: "${userMessage}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_KEY_HERE
+            const apiKey = ""; // Set apiKey to empty string for Canvas environment
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
