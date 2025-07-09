@@ -116,7 +116,7 @@
         }
     </style>
 </head>
-<body class="p-6 md:p-10">
+<body>
     <div class="max-w-7xl mx-auto flex-grow">
         <header class="text-center mb-10 relative">
             <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-3 leading-tight">
@@ -345,8 +345,14 @@
 
                 } catch (error) {
                     console.error("Error fetching personalized news:", error);
-                    personalizedNewsFeed.innerHTML = '<p class="text-red-500">Error loading personalized news. Please try again later.</p>';
-                    showMessageBox("Error loading personalized news. Please check console for details.");
+                    // Check if the error is a permissions error
+                    if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
+                        personalizedNewsFeed.innerHTML = '<p class="text-red-500">Error loading personalized news: Permission denied. Please ensure your Firebase Security Rules allow reading from your "analyzedArticles" collection.</p>';
+                        showMessageBox("Error: Firebase Permission Denied. Please update your Firestore Security Rules.");
+                    } else {
+                        personalizedNewsFeed.innerHTML = '<p class="text-red-500">Error loading personalized news. Please try again later.</p>';
+                        showMessageBox("Error loading personalized news. Please check console for details.");
+                    }
                 }
 
             } else {
