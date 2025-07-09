@@ -108,6 +108,13 @@
             window.authInstance = auth; // Expose auth instance
             window.signOut = signOut; // Expose signOut
 
+            // Expose db and appId for saving analyzed articles
+            window.db = db;
+            window.appId = appId;
+            window.collection = collection;
+            window.addDoc = addDoc;
+            window.serverTimestamp = serverTimestamp;
+
             // Initialize Firestore listener after authentication
             setupCommunityContributionsListener(db, appId);
             setupLeaderboardListener(db, appId); // Setup leaderboard listener
@@ -931,6 +938,20 @@
             // Update Deepfake & AI-Generated Text Detector
             deepfakeDetectionOutput.innerHTML = `<p class="text-gray-800">${aiDetectionResult.replace(/\n/g, '<br>')}</p>`;
 
+            // Save analyzed article to user's history if logged in (not anonymous)
+            if (window.authInstance.currentUser && !window.authInstance.currentUser.isAnonymous) {
+                try {
+                    await window.addDoc(window.collection(window.db, `artifacts/${window.appId}/users/${window.currentUserId}/analyzedArticles`), {
+                        text: newsInput.substring(0, 500), // Save a snippet or full text
+                        analysisSummary: analysisResult.substring(0, 200), // Save a summary
+                        timestamp: window.serverTimestamp()
+                    });
+                    console.log("Analyzed article saved to user history.");
+                } catch (error) {
+                    console.error("Error saving analyzed article to user history:", error);
+                }
+            }
+
 
             // Reset button state
             analyzeBtn.innerHTML = 'Check News';
@@ -1038,7 +1059,7 @@
             User query/text: "${userMessage}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_KEY_HERE
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
