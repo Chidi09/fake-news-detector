@@ -92,6 +92,32 @@
             text-decoration: underline;
             transition: color 0.2s ease, text-decoration 0.2s ease;
         }
+        /* Topic tag styling */
+        .topic-tag {
+            background-color: #e0e0e0;
+            color: #4a4a4a;
+            padding: 0.3rem 0.7rem;
+            border-radius: 9999px; /* Pill shape */
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s ease;
+        }
+        .topic-tag:hover {
+            background-color: #c0c0c0;
+        }
+        .topic-tag-remove {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            color: #888;
+            transition: color 0.2s ease;
+        }
+        .topic-tag-remove:hover {
+            color: #d32f2f;
+        }
     </style>
 </head>
 <body class="p-6 md:p-10">
@@ -119,6 +145,18 @@
                 <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Your Analyzed Article History</h2>
                 <div id="articleHistory" class="bg-gray-50 p-4 text-gray-700 border min-h-[150px] overflow-y-auto">
                     <p class="text-gray-500">Loading your article history...</p>
+                </div>
+            </section>
+
+            <section class="card mt-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Manage Your Interests</h2>
+                <div class="mb-4">
+                    <input type="text" id="customTopicInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0" placeholder="Add a custom interest (e.g., 'Space Exploration', 'AI Ethics')">
+                    <button id="addCustomTopicBtn" class="btn btn-secondary mt-3">Add Topic</button>
+                    <button id="saveCustomTopicsBtn" class="btn btn-primary mt-3 ml-2">Save My Interests</button>
+                </div>
+                <div id="userCustomTopics" class="bg-gray-50 p-4 text-gray-700 border min-h-[80px] flex flex-wrap items-center gap-2">
+                    <p class="text-gray-500">Your custom interests will appear here.</p>
                 </div>
             </section>
 
@@ -163,13 +201,14 @@
         // Initialize Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
         let currentUserId = null; // Will be set after authentication
+        let userCustomTopics = []; // Local array to hold user's custom topics
 
         // --- Utility Functions ---
 
@@ -186,6 +225,34 @@
             document.body.appendChild(messageBox);
         }
 
+        // Function to render custom topics to the UI
+        function renderCustomTopics() {
+            const userCustomTopicsDiv = document.getElementById('userCustomTopics');
+            userCustomTopicsDiv.innerHTML = ''; // Clear existing topics
+
+            if (userCustomTopics.length === 0) {
+                userCustomTopicsDiv.innerHTML = '<p class="text-gray-500">Your custom interests will appear here.</p>';
+                return;
+            }
+
+            userCustomTopics.forEach((topic, index) => {
+                const tag = document.createElement('span');
+                tag.className = 'topic-tag';
+                tag.innerHTML = `${topic} <span class="topic-tag-remove" data-index="${index}">&times;</span>`;
+                userCustomTopicsDiv.appendChild(tag);
+            });
+
+            // Add event listeners for removing tags
+            userCustomTopicsDiv.querySelectorAll('.topic-tag-remove').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const indexToRemove = parseInt(event.target.dataset.index);
+                    userCustomTopics.splice(indexToRemove, 1);
+                    renderCustomTopics(); // Re-render after removal
+                });
+            });
+        }
+
+
         // Function to extract keywords/topics from analyzed articles using Gemini
         async function extractKeywordsFromArticles(articlesText) {
             if (!articlesText || articlesText.trim() === '') {
@@ -201,7 +268,6 @@
             "${articlesText}"` }] });
 
             const payload = { contents: chatHistory };
-            // FIX: Use firebaseConfig.apiKey for Gemini API calls
             const apiKey = firebaseConfig.apiKey; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -215,7 +281,7 @@
                 if (!response.ok) {
                     const errorBody = await response.json();
                     console.error('Gemini API HTTP Error (Keywords):', response.status, errorBody);
-                    console.error('Gemini API Error Details (Keywords):', errorBody); // Log full error details
+                    console.error('Gemini API Error Details (Keywords):', errorBody); 
                     return `Error: Could not infer topics. API request failed with status ${response.status}.`;
                 }
 
@@ -241,17 +307,16 @@
             }
 
             let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: `Based on the following inferred user interests/topics, generate 3-5 hypothetical news article headlines and brief summaries (1-2 sentences each) that would be relevant to these interests. Ensure the tone is neutral and factual.
+            chatHistory.push({ role: "user", parts: [{ text: `Based on the following user interests/topics, generate 3-5 realistic news article titles and corresponding hypothetical URLs (e.g., "https://example.com/news/article-slug") that would be relevant to these interests. Ensure the tone is neutral and factual.
 
             Inferred Topics: "${topics}"
 
             Format each recommendation as:
-            Headline: [Headline]
-            Summary: [Summary]
+            Title: [Article Title]
+            URL: [Hypothetical URL]
             ---` }] });
 
             const payload = { contents: chatHistory };
-            // FIX: Use firebaseConfig.apiKey for Gemini API calls
             const apiKey = firebaseConfig.apiKey; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -289,6 +354,11 @@
             const articleHistoryDiv = document.getElementById('articleHistory');
             const inferredTopicsDiv = document.getElementById('inferredTopics');
             const recommendedNewsDiv = document.getElementById('recommendedNews');
+            const customTopicInput = document.getElementById('customTopicInput');
+            const addCustomTopicBtn = document.getElementById('addCustomTopicBtn');
+            const saveCustomTopicsBtn = document.getElementById('saveCustomTopicsBtn');
+            const userCustomTopicsDiv = document.getElementById('userCustomTopics');
+
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
@@ -297,6 +367,18 @@
 
                     // Only proceed if not anonymous
                     if (!user.isAnonymous) {
+                        // Fetch user's custom topics
+                        const userTopicsDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/userTopics/data`);
+                        const userTopicsSnap = await getDoc(userTopicsDocRef);
+                        if (userTopicsSnap.exists()) {
+                            userCustomTopics = userTopicsSnap.data().topics || [];
+                        } else {
+                            // Create the document if it doesn't exist
+                            await setDoc(userTopicsDocRef, { topics: [] });
+                            userCustomTopics = [];
+                        }
+                        renderCustomTopics(); // Render initial custom topics
+
                         // Fetch analyzed article history
                         const articlesColRef = collection(db, `artifacts/${appId}/users/${currentUserId}/analyzedArticles`);
                         const q = query(articlesColRef, orderBy('timestamp', 'desc'));
@@ -331,14 +413,41 @@
 
                             // Infer topics from all analyzed article summaries
                             inferredTopicsDiv.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Inferring topics...</p>';
-                            const inferredTopics = await extractKeywordsFromArticles(allArticleSummaries);
-                            inferredTopicsDiv.innerHTML = `<p class="text-gray-800 font-semibold">Inferred Topics: ${inferredTopics}</p>`;
-                            console.log("Inferred Topics:", inferredTopics);
+                            const inferredTopicsText = await extractKeywordsFromArticles(allArticleSummaries);
+                            inferredTopicsDiv.innerHTML = `<p class="text-gray-800 font-semibold">Inferred Topics: ${inferredTopicsText}</p>`;
+                            console.log("Inferred Topics:", inferredTopicsText);
+
+                            // Combine inferred and custom topics
+                            const combinedTopics = Array.from(new Set([
+                                ...inferredTopicsText.split(',').map(t => t.trim()).filter(t => t !== 'No articles provided for topic inference.'),
+                                ...userCustomTopics.map(t => t.trim())
+                            ])).filter(t => t !== '').join(', ');
 
                             // Generate personalized news recommendations
                             recommendedNewsDiv.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Generating recommendations...</p>';
-                            const recommendations = await generateNewsRecommendations(inferredTopics);
-                            recommendedNewsDiv.innerHTML = `<div class="prose max-w-none">${recommendations.replace(/\n/g, '<br>')}</div>`; // Use prose for better formatting
+                            const recommendations = await generateNewsRecommendations(combinedTopics);
+                            
+                            // Parse and display recommendations as clickable links
+                            recommendedNewsDiv.innerHTML = ''; // Clear previous
+                            const recsArray = recommendations.split('---').filter(item => item.trim() !== '');
+                            if (recsArray.length > 0) {
+                                const recsList = document.createElement('ul');
+                                recsList.className = 'list-disc list-inside space-y-3';
+                                recsArray.forEach(rec => {
+                                    const titleMatch = rec.match(/Title:\s*(.*)/);
+                                    const urlMatch = rec.match(/URL:\s*(.*)/);
+                                    if (titleMatch && urlMatch) {
+                                        const title = titleMatch[1].trim();
+                                        const url = urlMatch[1].trim();
+                                        const listItem = document.createElement('li');
+                                        listItem.innerHTML = `<a href="${url}" target="_blank" class="text-blue-600 hover:underline font-semibold">${title}</a>`;
+                                        recsList.appendChild(listItem);
+                                    }
+                                });
+                                recommendedNewsDiv.appendChild(recsList);
+                            } else {
+                                recommendedNewsDiv.innerHTML = '<p class="text-gray-500">No recommendations generated. Try adding more articles or custom interests.</p>';
+                            }
                             console.log("Recommendations:", recommendations);
 
                         }, (error) => {
@@ -361,6 +470,45 @@
                         window.location.href = 'auth.html';
                     }
                     authStatusDisplay.textContent = "Not signed in. Redirecting...";
+                }
+            });
+
+            // Event listener for adding custom topics
+            addCustomTopicBtn.addEventListener('click', () => {
+                const newTopic = customTopicInput.value.trim();
+                if (newTopic && !userCustomTopics.includes(newTopic)) {
+                    userCustomTopics.push(newTopic);
+                    customTopicInput.value = ''; // Clear input
+                    renderCustomTopics(); // Update UI
+                } else if (userCustomTopics.includes(newTopic)) {
+                    showMessageBox('This topic is already added.');
+                }
+            });
+
+            // Event listener for saving custom topics to Firestore
+            saveCustomTopicsBtn.addEventListener('click', async () => {
+                if (!currentUserId || auth.currentUser.isAnonymous) {
+                    showMessageBox('Please sign up or log in to save your interests.');
+                    return;
+                }
+                try {
+                    const userTopicsDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/userTopics/data`);
+                    await setDoc(userTopicsDocRef, { topics: userCustomTopics });
+                    showMessageBox('Your interests have been saved!');
+                    // Re-trigger recommendations to include newly saved topics
+                    // This will happen automatically via onSnapshot on analyzedArticles,
+                    // but we can force a refresh if needed for immediate feedback.
+                    // For now, relying on next article analysis or page refresh.
+                } catch (error) {
+                    console.error("Error saving custom topics:", error);
+                    showMessageBox('Error saving interests. Please try again.');
+                }
+            });
+
+            // Allow pressing Enter to add custom topic
+            customTopicInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addCustomTopicBtn.click();
                 }
             });
         });
