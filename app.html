@@ -45,9 +45,10 @@
         // Authenticate user and handle redirection
         onAuthStateChanged(auth, async (user) => {
             const addEvidenceBtn = document.getElementById('addEvidenceBtn');
-            const authStatusDisplay = document.getElementById('authStatusDisplay'); // Element to display status
-            const logoutButton = document.getElementById('logoutButton'); // Logout button
-            const myProfileLink = document.getElementById('myProfileLink'); // My Profile link
+            const authStatusDisplay = document.getElementById('authStatusDisplay');
+            const logoutButton = document.getElementById('logoutButton');
+            const myProfileLink = document.getElementById('myProfileLink');
+            const anonymousContributionMessage = document.getElementById('anonymousContributionMessage');
 
             if (user) {
                 userId = user.uid;
@@ -55,17 +56,21 @@
                 
                 // Update UI based on user type
                 if (user.isAnonymous) {
-                    authStatusDisplay.textContent = `Signed in as: Anonymous (${userId.substring(0, 8)}...)`;
+                    authStatusDisplay.textContent = `Signed in as: Anonymous`;
+                    logoutButton.classList.add('hidden'); // Hide logout for anonymous
+                    myProfileLink.classList.add('hidden'); // Hide profile link for anonymous
+                    addEvidenceBtn.disabled = true; // Disable contribution for anonymous
+                    anonymousContributionMessage.classList.remove('hidden'); // Show message
                     // If anonymous, redirect to auth page to encourage sign-up
-                    // Only redirect if not already on auth.html to prevent loop
                     if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
                         window.location.href = 'auth.html';
                     }
-                    myProfileLink.classList.add('hidden'); // Hide profile link for anonymous
                 } else {
-                    authStatusDisplay.textContent = `Signed in as: ${user.email} (${userId.substring(0, 8)}...)`;
+                    authStatusDisplay.textContent = `Signed in as: ${user.email}`;
                     logoutButton.classList.remove('hidden'); // Show logout button for logged-in users
                     myProfileLink.classList.remove('hidden'); // Show profile link for logged-in users
+                    addEvidenceBtn.disabled = false; // Enable contribution for authenticated users
+                    anonymousContributionMessage.classList.add('hidden'); // Hide message
                 }
 
                 document.getElementById('currentUserIdDisplay').textContent = `Your User ID: ${userId.substring(0, 8)}...`;
@@ -80,9 +85,6 @@
                     await setDoc(userDocRef, { points: 0, createdAt: serverTimestamp() });
                 }
                 document.getElementById('currentUserPointsDisplay').textContent = `Your Points: ${userPoints}`;
-                if (addEvidenceBtn) {
-                    addEvidenceBtn.disabled = false; // Enable button after successful authentication
-                }
 
             } else {
                 // User is signed out. Redirect to auth.html.
@@ -90,9 +92,8 @@
                 if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
                     window.location.href = 'auth.html';
                 }
-                if (addEvidenceBtn) {
-                    addEvidenceBtn.disabled = true; // Keep button disabled if not authenticated
-                }
+                addEvidenceBtn.disabled = true; // Keep button disabled if not authenticated
+                anonymousContributionMessage.classList.remove('hidden'); // Show message
                 authStatusDisplay.textContent = "Not signed in. Redirecting...";
                 logoutButton.classList.add('hidden'); // Hide logout if not signed in
                 myProfileLink.classList.add('hidden'); // Hide profile link if not signed in
@@ -403,9 +404,9 @@
             </p>
             <!-- Authentication Status, My Profile Link, and Logout Button -->
             <div class="absolute top-0 right-0 text-right text-sm text-gray-700 flex flex-col items-end">
-                <p id="authStatusDisplay">Loading authentication status...</p>
-                <a href="profile.html" id="myProfileLink" class="text-blue-600 hover:underline mt-1 hidden hover-effect-link">My Profile</a>
-                <button id="logoutButton" class="btn btn-secondary text-xs py-1 px-2 mt-2 hidden">Log Out</button>
+                <p id="authStatusDisplay" class="font-semibold"></p>
+                <a href="profile.html" id="myProfileLink" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">My Profile</a>
+                <button id="logoutButton" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">Log Out</button>
             </div>
         </header>
 
@@ -542,6 +543,7 @@
                         <input type="text" id="evidenceLinkInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Paste link to verified evidence (e.g., reputable news, official report)">
                         <textarea id="evidenceCommentInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Add a brief comment about this evidence..."></textarea>
                         <button id="addEvidenceBtn" class="btn btn-secondary w-full" disabled>Submit Evidence</button>
+                        <p id="anonymousContributionMessage" class="text-sm text-red-500 mt-2 hidden">Please sign up or log in to submit evidence.</p>
                     </div>
                 </section>
             </div>
@@ -950,6 +952,13 @@
             const updateDoc = window.updateDoc;
             const getDoc = window.getDoc;
             const setDoc = window.setDoc;
+
+            // IMPORTANT: Only allow authenticated (non-anonymous) users to submit evidence
+            if (!window.authInstance.currentUser || window.authInstance.currentUser.isAnonymous) {
+                showMessageBox('Please sign up or log in with an email account to submit evidence.');
+                return;
+            }
+
 
             if (!db || !addDoc || !collection || !serverTimestamp || !appId || !currentUserId || !doc || !updateDoc || !getDoc || !setDoc) {
                 console.error("Firebase services not fully initialized or user not authenticated.");
