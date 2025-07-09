@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personalized News - The Daily Truth</title>
+    <title>Personalized News Feed</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
+        /* Custom styles for Inter font for body and Playfair Display for headings */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f5f5dc; /* Cream/Beige for newspaper paper */
@@ -15,48 +16,55 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            padding: 1rem;
         }
         h1, h2 {
             font-family: 'Playfair Display', serif;
         }
-        .card {
-            background-color: #ffffff;
-            padding: 2rem;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        /* Ensure all elements have rounded corners - slightly less pronounced for newspaper feel */
+        * {
             border-radius: 0.5rem;
-            margin-bottom: 2rem;
-            border: 1px solid #d3d3d3;
         }
+        /* Specific styling for card-like sections */
+        .card {
+            background-color: #ffffff; /* Clean white for content blocks */
+            padding: 2rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Softer shadow */
+            margin-bottom: 2rem;
+            border: 1px solid #d3d3d3; /* Light gray border for definition */
+        }
+        /* Style for interactive elements like buttons */
         .btn {
             padding: 0.85rem 1.8rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s ease; /* Faster, snappier transitions */
             letter-spacing: 0.025em;
             text-transform: uppercase;
-            border-radius: 0.375rem;
+            border-radius: 0.375rem; /* Slightly less rounded for a classic feel */
         }
         .btn-primary {
-            background-color: #4a4a4a;
+            background-color: #4a4a4a; /* Dark gray */
             color: white;
-            box-shadow: none;
+            box-shadow: none; /* No shadow for a flatter, newspaper print look */
             border: 1px solid #333;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
         .btn-primary:hover {
-            background-color: #333;
-            transform: none;
+            background-color: #333; /* Darker gray on hover */
+            transform: none; /* No lift effect */
         }
-        /* Message box styling */
-        .message-box {
-            background-color: rgba(0, 0, 0, 0.7);
+        .btn-secondary {
+            background-color: #e0e0e0; /* Light gray */
+            color: #4a4a4a; /* Dark gray text */
+            border: 1px solid #b0b0b0; /* Muted border */
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
-        .message-box-content {
-            background-color: #ffffff;
-            padding: 2rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        .btn-secondary:hover {
+            background-color: #c0c0c0; /* Darker light gray on hover */
+            color: #333;
+            transform: none; /* No lift effect */
         }
+        /* Loading spinner */
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
             border-top: 4px solid #fff;
@@ -72,71 +80,59 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Text hover animations */
+        .hover-effect-text:hover {
+            color: #1976d2; /* A subtle blue on hover */
+            transform: translateY(-2px); /* Slight lift */
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
         .hover-effect-link:hover {
-            color: #3182ce;
+            color: #3182ce; /* A more pronounced blue for links */
             text-decoration: underline;
             transition: color 0.2s ease, text-decoration 0.2s ease;
         }
-        .news-article {
-            background-color: #fdfdfd;
-            border: 1px solid #e0e0e0;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-        .news-article h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #36454F;
-            margin-bottom: 0.75rem;
-        }
-        .news-article p {
-            font-size: 1rem;
-            color: #4a4a4a;
-            line-height: 1.6;
-            margin-bottom: 1rem;
-        }
-        .news-article a {
-            color: #1976d2;
-            font-weight: 600;
-        }
-        .news-article a:hover {
-            text-decoration: underline;
-        }
-        .news-category {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #4a4a4a;
-            margin-bottom: 1rem;
-            border-bottom: 2px solid #d3d3d3;
-            padding-bottom: 0.5rem;
-            margin-top: 2rem;
-        }
     </style>
 </head>
-<body>
+<body class="p-6 md:p-10">
     <div class="max-w-7xl mx-auto flex-grow">
+        <!-- Header Section -->
         <header class="text-center mb-10 relative">
             <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-3 leading-tight">
                 <span class="bg-clip-text text-transparent bg-gradient-to-r from-gray-700 to-gray-900">
-                    Personalized News
+                    Your Personalized News
                 </span>
             </h1>
             <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-                News tailored just for you, verified by The Daily Truth.
+                News tailored to your interests, based on your analyzed articles.
             </p>
-            <div class="absolute top-0 right-0">
-                <a href="app.html" class="btn btn-primary text-sm py-1 px-3">Back to App</a>
+            <!-- Authentication Status and Back to Main App Button -->
+            <div class="absolute top-0 right-0 text-right text-sm text-gray-700 flex flex-col items-end">
+                <p id="authStatusDisplay" class="font-semibold"></p>
+                <a href="app.html" class="btn btn-secondary text-xs py-1 px-2 mt-1">Back to Main App</a>
             </div>
         </header>
 
+        <!-- Main Content Area -->
         <main>
             <section class="card">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">Your Personalized Feed</h2>
-                <div id="personalizedNewsFeed" class="min-h-[200px] flex items-center justify-center">
-                    <p class="text-gray-500">Loading your personalized news...</p>
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Your Analyzed Article History</h2>
+                <div id="articleHistory" class="bg-gray-50 p-4 text-gray-700 border min-h-[150px] overflow-y-auto">
+                    <p class="text-gray-500">Loading your article history...</p>
+                </div>
+            </section>
+
+            <section class="card mt-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Inferred Topics & Interests</h2>
+                <div id="inferredTopics" class="bg-gray-50 p-4 text-gray-700 border min-h-[100px]">
+                    <p class="text-gray-500">Analyzing your history to infer topics...</p>
+                </div>
+            </section>
+
+            <section class="card mt-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Recommended News Articles</h2>
+                <div id="recommendedNews" class="bg-gray-50 p-4 text-gray-700 border min-h-[200px]">
+                    <p class="text-gray-500">Generating personalized news recommendations...</p>
                 </div>
             </section>
         </main>
@@ -152,11 +148,7 @@
     </footer>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { getFirestore, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-
-        // Your web app's Firebase configuration (MUST BE THE SAME AS other HTML files)
+        // Firebase Configuration (MUST BE THE SAME AS app.html)
         const firebaseConfig = {
             apiKey: "AIzaSyAzxIOsaM2smH6Xx5XTyP8PMHZF1SloV8k",
             authDomain: "fakenewsdetector-a29bd.firebaseapp.com",
@@ -169,13 +161,19 @@
         const appId = firebaseConfig.appId;
 
         // Initialize Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        const personalizedNewsFeed = document.getElementById('personalizedNewsFeed');
+        let currentUserId = null; // Will be set after authentication
 
-        // Function to display a custom message box (for consistency)
+        // --- Utility Functions ---
+
+        // Function to display a custom message box (copied from app.html for consistency)
         function showMessageBox(message) {
             const messageBox = document.createElement('div');
             messageBox.className = 'fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 message-box';
@@ -188,30 +186,23 @@
             document.body.appendChild(messageBox);
         }
 
-        // Function to extract keywords/topics from analyzed articles using Gemini API
-        async function extractKeywordsFromArticles(articles) {
-            if (!articles || articles.length === 0) {
-                console.warn("No articles provided for keyword extraction.");
-                return [];
-            }
-
-            const combinedText = articles.map(a => a.text).join('\n\n');
-            if (combinedText.trim().length === 0) {
-                console.warn("Combined text for keyword extraction is empty.");
-                return [];
+        // Function to extract keywords/topics from analyzed articles using Gemini
+        async function extractKeywordsFromArticles(articlesText) {
+            if (!articlesText || articlesText.trim() === '') {
+                return "No articles provided for topic inference.";
             }
 
             let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: `Extract the top 5-10 most prominent keywords or topics from the following combined news article texts. Focus on general subjects rather than specific events or names, suitable for personalizing a news feed. Return them as a comma-separated list.
+            chatHistory.push({ role: "user", parts: [{ text: `Given the following collection of analyzed news article summaries, identify the main topics, keywords, and recurring themes. Provide a concise list of 5-10 key topics/keywords that represent the user's interests. Format as a comma-separated list.
 
-            Example: "politics, technology, environment, health, sports"
+            Example: "Politics, Technology, Environment, Health, Sports"
 
-            Combined News Text:
-            "${combinedText}"` }] });
+            Analyzed Article Summaries:
+            "${articlesText}"` }] });
 
             const payload = { contents: chatHistory };
-            // Set apiKey to an empty string to let the Canvas environment inject it
-            const apiKey = ""; 
+            // FIX: Use firebaseConfig.apiKey for Gemini API calls
+            const apiKey = firebaseConfig.apiKey; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -224,144 +215,154 @@
                 if (!response.ok) {
                     const errorBody = await response.json();
                     console.error('Gemini API HTTP Error (Keywords):', response.status, errorBody);
-                    console.error('Gemini API Error Details (Keywords):', errorBody);
-                    showMessageBox(`Error extracting keywords: ${errorBody.error?.message || 'API request failed.'}`);
-                    return [];
+                    console.error('Gemini API Error Details (Keywords):', errorBody); // Log full error details
+                    return `Error: Could not infer topics. API request failed with status ${response.status}.`;
                 }
 
                 const result = await response.json();
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
-                    const keywordsString = result.candidates[0].content.parts[0].text;
-                    console.log("Raw Keywords from Gemini:", keywordsString); // Log raw response
-                    return keywordsString.split(',').map(kw => kw.trim()).filter(kw => kw.length > 0);
+                    return result.candidates[0].content.parts[0].text;
                 } else {
                     console.error('Gemini API response structure unexpected (Keywords):', result);
-                    showMessageBox('Error: Could not get keywords from AI. Unexpected response structure.');
-                    return [];
+                    return 'Error: Could not infer topics from AI.';
                 }
             } catch (error) {
                 console.error('Error calling Gemini API (Keywords):', error);
-                showMessageBox(`Error: Failed to connect to AI keyword extraction service. ${error.message}`);
-                return [];
+                return `Error: Failed to infer topics.`;
             }
         }
 
-        // Function to simulate fetching personalized news based on topics
-        async function fetchPersonalizedNews(topics) {
-            personalizedNewsFeed.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Generating personalized news...</p>';
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-
-            if (topics.length === 0) {
-                return { "General News": [
-                    { title: "Global Markets Update", snippet: "Stock markets show mixed reactions to recent economic data.", url: "https://example.com/global-markets" },
-                    { title: "Latest in Space Exploration", snippet: "New discoveries from the James Webb Space Telescope.", url: "https://example.com/space-exploration" }
-                ]};
+        // Function to generate personalized news recommendations using Gemini and inferred topics
+        async function generateNewsRecommendations(topics) {
+            if (!topics || topics.trim() === '') {
+                return "No topics inferred to generate recommendations.";
             }
 
-            const personalizedArticles = {};
-            const availableTopics = ["Politics", "Technology", "Environment", "Health", "Sports", "Economy", "Science", "Culture"];
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: `Based on the following inferred user interests/topics, generate 3-5 hypothetical news article headlines and brief summaries (1-2 sentences each) that would be relevant to these interests. Ensure the tone is neutral and factual.
 
-            topics.forEach(topic => {
-                const capitalizedTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
-                if (availableTopics.includes(capitalizedTopic)) {
-                    personalizedArticles[capitalizedTopic] = [
-                        { title: `Breakthrough in ${capitalizedTopic} Research`, snippet: `Scientists announce a major discovery in the field of ${topic}.`, url: `https://example.com/${topic}-breakthrough` },
-                        { title: `Analysis: The Future of ${capitalizedTopic}`, snippet: `Experts weigh in on upcoming trends and challenges in ${topic}.`, url: `https://example.com/${topic}-future` }
-                    ];
-                } else {
-                     // Fallback for topics not directly matched
-                     if (!personalizedArticles["General News"]) {
-                         personalizedArticles["General News"] = [];
-                     }
-                     personalizedArticles["General News"].push(
-                         { title: `News related to ${capitalizedTopic}`, snippet: `An interesting development concerning ${topic}.`, url: `https://example.com/${topic}-general` }
-                     );
+            Inferred Topics: "${topics}"
+
+            Format each recommendation as:
+            Headline: [Headline]
+            Summary: [Summary]
+            ---` }] });
+
+            const payload = { contents: chatHistory };
+            // FIX: Use firebaseConfig.apiKey for Gemini API calls
+            const apiKey = firebaseConfig.apiKey; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error('Gemini API HTTP Error (Recommendations):', response.status, errorBody);
+                    return `Error: Could not generate recommendations. API request failed with status ${response.status}.`;
                 }
-            });
 
-            // Ensure there's always some content, even if topics are niche
-            if (Object.keys(personalizedArticles).length === 0) {
-                personalizedArticles["General News"] = [
-                    { title: "Top Headlines Today", snippet: "A summary of the day's most important news.", url: "https://example.com/top-headlines" }
-                ];
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error('Gemini API response structure unexpected (Recommendations):', result);
+                    return 'Error: Could not generate recommendations from AI.';
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API (Recommendations):', error);
+                return `Error: Failed to generate recommendations.`;
             }
-
-
-            return personalizedArticles;
         }
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user && !user.isAnonymous) {
-                // User is signed in with email.
-                const userId = user.uid;
-                personalizedNewsFeed.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Fetching your analyzed articles...</p>';
+        // --- Main DOMContentLoaded Listener ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const authStatusDisplay = document.getElementById('authStatusDisplay');
+            const articleHistoryDiv = document.getElementById('articleHistory');
+            const inferredTopicsDiv = document.getElementById('inferredTopics');
+            const recommendedNewsDiv = document.getElementById('recommendedNews');
 
-                try {
-                    // Fetch analyzed articles for the current user
-                    const analyzedArticlesColRef = collection(db, `artifacts/${appId}/users/${userId}/analyzedArticles`);
-                    const q = query(analyzedArticlesColRef, orderBy('timestamp', 'desc'));
-                    const querySnapshot = await getDocs(q);
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                    authStatusDisplay.textContent = `Signed in as: ${user.email}`;
 
-                    const analyzedArticles = [];
-                    querySnapshot.forEach((doc) => {
-                        analyzedArticles.push(doc.data());
-                    });
+                    // Only proceed if not anonymous
+                    if (!user.isAnonymous) {
+                        // Fetch analyzed article history
+                        const articlesColRef = collection(db, `artifacts/${appId}/users/${currentUserId}/analyzedArticles`);
+                        const q = query(articlesColRef, orderBy('timestamp', 'desc'));
 
-                    if (analyzedArticles.length === 0) {
-                        personalizedNewsFeed.innerHTML = `
-                            <p class="text-gray-700 text-center">It looks like you haven't analyzed any articles yet.
-                            <br>Head back to the <a href="app.html" class="text-blue-600 hover:underline hover-effect-link">main app</a> to start analyzing news and build your personalized feed!</p>
-                        `;
-                        return;
-                    }
+                        onSnapshot(q, async (snapshot) => {
+                            articleHistoryDiv.innerHTML = ''; // Clear previous history
+                            let allArticleSummaries = '';
 
-                    // Extract keywords/topics from analyzed articles
-                    const topics = await extractKeywordsFromArticles(analyzedArticles);
-                    console.log("Inferred Topics:", topics); // Log the final inferred topics
+                            if (snapshot.empty) {
+                                articleHistoryDiv.innerHTML = '<p class="text-gray-500">No analyzed articles in your history yet. Analyze some news on the main page!</p>';
+                                inferredTopicsDiv.innerHTML = '<p class="text-gray-500">No history to infer topics.</p>';
+                                recommendedNewsDiv.innerHTML = '<p class="text-gray-500">No topics to generate recommendations.</p>';
+                                return;
+                            }
 
-                    // Fetch and display personalized news based on topics
-                    const newsByTopic = await fetchPersonalizedNews(topics);
+                            const ul = document.createElement('ul');
+                            ul.className = 'list-disc list-inside space-y-2';
 
-                    let newsHtml = '';
-                    if (Object.keys(newsByTopic).length === 0) {
-                        newsHtml = '<p class="text-gray-500">Could not generate personalized news. Try analyzing more articles!</p>';
-                    } else {
-                        for (const category in newsByTopic) {
-                            newsHtml += `<h3 class="news-category">${category}</h3>`;
-                            newsByTopic[category].forEach(article => {
-                                newsHtml += `
-                                    <div class="news-article">
-                                        <h3>${article.title}</h3>
-                                        <p>${article.snippet}</p>
-                                        <a href="${article.url}" target="_blank">Read More &rarr;</a>
-                                    </div>
+                            snapshot.forEach((doc) => {
+                                const data = doc.data();
+                                const li = document.createElement('li');
+                                const timestamp = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A';
+                                li.innerHTML = `
+                                    <p class="font-semibold text-gray-800">${data.text.substring(0, 100)}...</p>
+                                    <p class="text-xs text-gray-500 mt-1">Analyzed on: ${timestamp}</p>
+                                    <p class="text-xs text-gray-500">Summary: ${data.analysisSummary || 'N/A'}</p>
                                 `;
+                                ul.appendChild(li);
+                                allArticleSummaries += data.analysisSummary + ". "; // Concatenate summaries
                             });
+                            articleHistoryDiv.appendChild(ul);
+
+                            // Infer topics from all analyzed article summaries
+                            inferredTopicsDiv.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Inferring topics...</p>';
+                            const inferredTopics = await extractKeywordsFromArticles(allArticleSummaries);
+                            inferredTopicsDiv.innerHTML = `<p class="text-gray-800 font-semibold">Inferred Topics: ${inferredTopics}</p>`;
+                            console.log("Inferred Topics:", inferredTopics);
+
+                            // Generate personalized news recommendations
+                            recommendedNewsDiv.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Generating recommendations...</p>';
+                            const recommendations = await generateNewsRecommendations(inferredTopics);
+                            recommendedNewsDiv.innerHTML = `<div class="prose max-w-none">${recommendations.replace(/\n/g, '<br>')}</div>`; // Use prose for better formatting
+                            console.log("Recommendations:", recommendations);
+
+                        }, (error) => {
+                            console.error("Error fetching analyzed articles:", error);
+                            articleHistoryDiv.innerHTML = '<p class="text-red-500">Error loading article history.</p>';
+                            inferredTopicsDiv.innerHTML = '<p class="text-red-500">Error inferring topics.</p>';
+                            recommendedNewsDiv.innerHTML = '<p class="text-red-500">Error generating recommendations.</p>';
+                        });
+                    } else {
+                        // Anonymous user, redirect to auth.html
+                        if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
+                            window.location.href = 'auth.html';
                         }
                     }
-                    personalizedNewsFeed.innerHTML = newsHtml;
 
-                } catch (error) {
-                    console.error("Error fetching personalized news:", error);
-                    // Check if the error is a permissions error
-                    if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
-                        personalizedNewsFeed.innerHTML = '<p class="text-red-500">Error loading personalized news: Permission denied. Please ensure your Firebase Security Rules allow reading from your "analyzedArticles" collection.</p>';
-                        showMessageBox("Error: Firebase Permission Denied. Please update your Firestore Security Rules.");
-                    } else {
-                        personalizedNewsFeed.innerHTML = '<p class="text-red-500">Error loading personalized news. Please try again later.</p>';
-                        showMessageBox("Error loading personalized news. Please check console for details.");
+                } else {
+                    // User is signed out, redirect to auth.html
+                    console.log("User not authenticated. Redirecting to auth.html");
+                    if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
+                        window.location.href = 'auth.html';
                     }
+                    authStatusDisplay.textContent = "Not signed in. Redirecting...";
                 }
-
-            } else {
-                // User is not signed in or is anonymous. Redirect to auth.html.
-                console.log("User not authenticated or is anonymous on personalized-news.html. Redirecting to auth.html");
-                if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
-                    window.location.href = 'auth.html';
-                }
-            }
+            });
         });
     </script>
 </body>
