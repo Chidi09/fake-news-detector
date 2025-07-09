@@ -45,8 +45,9 @@
         // Authenticate user and handle redirection
         onAuthStateChanged(auth, async (user) => {
             const addEvidenceBtn = document.getElementById('addEvidenceBtn');
-            const authStatusDisplay = document.getElementById('authStatusDisplay'); // New element to display status
-            const logoutButton = document.getElementById('logoutButton'); // New logout button
+            const authStatusDisplay = document.getElementById('authStatusDisplay'); // Element to display status
+            const logoutButton = document.getElementById('logoutButton'); // Logout button
+            const myProfileLink = document.getElementById('myProfileLink'); // My Profile link
 
             if (user) {
                 userId = user.uid;
@@ -60,9 +61,11 @@
                     if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
                         window.location.href = 'auth.html';
                     }
+                    myProfileLink.classList.add('hidden'); // Hide profile link for anonymous
                 } else {
                     authStatusDisplay.textContent = `Signed in as: ${user.email} (${userId.substring(0, 8)}...)`;
                     logoutButton.classList.remove('hidden'); // Show logout button for logged-in users
+                    myProfileLink.classList.remove('hidden'); // Show profile link for logged-in users
                 }
 
                 document.getElementById('currentUserIdDisplay').textContent = `Your User ID: ${userId.substring(0, 8)}...`;
@@ -83,7 +86,6 @@
 
             } else {
                 // User is signed out. Redirect to auth.html.
-                // This will happen if no user is found, or after a logout from auth.html
                 console.log("User not authenticated. Redirecting to auth.html");
                 if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
                     window.location.href = 'auth.html';
@@ -93,6 +95,7 @@
                 }
                 authStatusDisplay.textContent = "Not signed in. Redirecting...";
                 logoutButton.classList.add('hidden'); // Hide logout if not signed in
+                myProfileLink.classList.add('hidden'); // Hide profile link if not signed in
             }
             // Make userId and userPoints globally available after authentication
             window.currentUserId = userId;
@@ -398,9 +401,10 @@
             <p class="text-xl text-gray-600 max-w-2xl mx-auto">
                 Uncovering the facts, one story at a time. Your trusted source for clarity in a complex world.
             </p>
-            <!-- Authentication Status and Logout Button -->
-            <div class="absolute top-0 right-0 text-right text-sm text-gray-700">
+            <!-- Authentication Status, My Profile Link, and Logout Button -->
+            <div class="absolute top-0 right-0 text-right text-sm text-gray-700 flex flex-col items-end">
                 <p id="authStatusDisplay">Loading authentication status...</p>
+                <a href="profile.html" id="myProfileLink" class="text-blue-600 hover:underline mt-1 hidden hover-effect-link">My Profile</a>
                 <button id="logoutButton" class="btn btn-secondary text-xs py-1 px-2 mt-2 hidden">Log Out</button>
             </div>
         </header>
