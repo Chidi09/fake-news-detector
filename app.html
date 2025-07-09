@@ -303,103 +303,102 @@
             return dummyResults;
         }
 
+        // Function to set up real-time listener for community contributions
+        function setupCommunityContributionsListener(dbInstance, currentAppId) {
+            const contributionsColRef = collection(dbInstance, `artifacts/${currentAppId}/public/data/communityContributions`);
+            const q = query(contributionsColRef, orderBy('timestamp', 'desc')); // Order by timestamp
+
+            onSnapshot(q, (snapshot) => {
+                const contributionsList = document.getElementById('communityContributions');
+                contributionsList.innerHTML = ''; // Clear previous contributions
+
+                if (snapshot.empty) {
+                    contributionsList.innerHTML = '<p class="text-gray-500">No community contributions yet. Be the first to add evidence!</p>';
+                    return;
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'list-disc list-inside mt-3 text-base text-gray-600 space-y-2';
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const li = document.createElement('li');
+                    li.className = 'border-b border-gray-200 pb-2';
+                    const timestamp = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A';
+                    const contributorId = data.userId ? data.userId.substring(0, 8) + '...' : 'Anonymous'; // Truncate for display
+
+                    li.innerHTML = `
+                        <p class="font-semibold text-gray-800">${data.comment}</p>
+                        <a href="${data.link}" target="_blank" class="text-blue-600 hover:underline text-sm transition-colors duration-200">${data.link}</a>
+                        <p class="text-xs text-gray-500 mt-1">Contributed by: ${contributorId} (Points: ${data.points || 0}) on ${timestamp} 
+                        <button class="text-red-500 hover:text-red-700 text-xs ml-2 transition-colors duration-200" onclick="showMessageBox('Report functionality is conceptual. In a real app, this would flag the contribution for review.')">Report</button></p>
+                    `;
+                    ul.appendChild(li);
+                });
+                contributionsList.appendChild(ul);
+            }, (error) => {
+                console.error("Error fetching community contributions:", error);
+                document.getElementById('communityContributions').innerHTML = '<p class="text-red-500">Error loading community contributions.</p>';
+            });
+        }
+
+        // Function to set up real-time listener for leaderboard
+        function setupLeaderboardListener(dbInstance, currentAppId) {
+            const usersColRef = collection(dbInstance, `artifacts/${currentAppId}/users`);
+            const q = query(usersColRef); // No orderBy here, will sort in memory
+
+            onSnapshot(q, async (snapshot) => {
+                const leaderboardList = document.getElementById('leaderboardList');
+                leaderboardList.innerHTML = ''; // Clear previous leaderboard
+
+                let usersData = [];
+                for (const userDoc of snapshot.docs) {
+                    const profileDocRef = doc(dbInstance, `artifacts/${currentAppId}/users/${userDoc.id}/profile/data`);
+                    try {
+                        const profileDocSnap = await getDoc(profileDocRef);
+                        if (profileDocSnap.exists()) {
+                            usersData.push({
+                                userId: userDoc.id,
+                                points: profileDocSnap.data().points || 0
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching profile for user ${userDoc.id}:`, error);
+                        // Log the error but don't stop the leaderboard from loading
+                    }
+                }
+
+                // Sort users by points in descending order
+                usersData.sort((a, b) => b.points - a.points);
+
+                if (usersData.length === 0) {
+                    leaderboardList.innerHTML = '<p class="text-gray-500">No users on the leaderboard yet.</p>';
+                    return;
+                }
+
+                const ol = document.createElement('ol');
+                ol.className = 'list-decimal list-inside mt-3 text-base text-gray-600 space-y-1';
+
+                usersData.slice(0, 10).forEach((user, index) => { // Show top 10
+                    const li = document.createElement('li');
+                    const displayId = user.userId === window.currentUserId ? `You (${user.userId.substring(0, 8)}...)` : `${user.userId.substring(0, 8)}...`;
+                    li.innerHTML = `<span class="font-semibold text-gray-800">${displayId}</span>: ${user.points} points`;
+                    ol.appendChild(li);
+                });
+                leaderboardList.appendChild(ol);
+            }, (error) => {
+                console.error("Error fetching leaderboard:", error);
+                // More specific error message for permissions
+                if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
+                    leaderboardList.innerHTML = '<p class="text-red-500">Error loading leaderboard: Permission denied. Please ensure your Firebase Security Rules allow reading user profiles.</p>';
+                } else {
+                    leaderboardList.innerHTML = '<p class="text-red-500">Error loading leaderboard.</p>';
+                }
+            });
+        }
+
         // All DOM-related interactions and event listeners should be inside DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
-            
-            // Function to set up real-time listener for community contributions
-            function setupCommunityContributionsListener(dbInstance, currentAppId) {
-                const contributionsColRef = collection(dbInstance, `artifacts/${currentAppId}/public/data/communityContributions`);
-                const q = query(contributionsColRef, orderBy('timestamp', 'desc')); // Order by timestamp
-
-                onSnapshot(q, (snapshot) => {
-                    const contributionsList = document.getElementById('communityContributions');
-                    contributionsList.innerHTML = ''; // Clear previous contributions
-
-                    if (snapshot.empty) {
-                        contributionsList.innerHTML = '<p class="text-gray-500">No community contributions yet. Be the first to add evidence!</p>';
-                        return;
-                    }
-
-                    const ul = document.createElement('ul');
-                    ul.className = 'list-disc list-inside mt-3 text-base text-gray-600 space-y-2';
-
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
-                        const li = document.createElement('li');
-                        li.className = 'border-b border-gray-200 pb-2';
-                        const timestamp = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A';
-                        const contributorId = data.userId ? data.userId.substring(0, 8) + '...' : 'Anonymous'; // Truncate for display
-
-                        li.innerHTML = `
-                            <p class="font-semibold text-gray-800">${data.comment}</p>
-                            <a href="${data.link}" target="_blank" class="text-blue-600 hover:underline text-sm transition-colors duration-200">${data.link}</a>
-                            <p class="text-xs text-gray-500 mt-1">Contributed by: ${contributorId} (Points: ${data.points || 0}) on ${timestamp} 
-                            <button class="text-red-500 hover:text-red-700 text-xs ml-2 transition-colors duration-200" onclick="showMessageBox('Report functionality is conceptual. In a real app, this would flag the contribution for review.')">Report</button></p>
-                        `;
-                        ul.appendChild(li);
-                    });
-                    contributionsList.appendChild(ul);
-                }, (error) => {
-                    console.error("Error fetching community contributions:", error);
-                    document.getElementById('communityContributions').innerHTML = '<p class="text-red-500">Error loading community contributions.</p>';
-                });
-            }
-
-            // Function to set up real-time listener for leaderboard
-            function setupLeaderboardListener(dbInstance, currentAppId) {
-                const usersColRef = collection(dbInstance, `artifacts/${currentAppId}/users`);
-                const q = query(usersColRef); // No orderBy here, will sort in memory
-
-                onSnapshot(q, async (snapshot) => {
-                    const leaderboardList = document.getElementById('leaderboardList');
-                    leaderboardList.innerHTML = ''; // Clear previous leaderboard
-
-                    let usersData = [];
-                    for (const userDoc of snapshot.docs) {
-                        const profileDocRef = doc(dbInstance, `artifacts/${currentAppId}/users/${userDoc.id}/profile/data`);
-                        try {
-                            const profileDocSnap = await getDoc(profileDocRef);
-                            if (profileDocSnap.exists()) {
-                                usersData.push({
-                                    userId: userDoc.id,
-                                    points: profileDocSnap.data().points || 0
-                                });
-                            }
-                        } catch (error) {
-                            console.error(`Error fetching profile for user ${userDoc.id}:`, error);
-                            // Log the error but don't stop the leaderboard from loading
-                        }
-                    }
-
-                    // Sort users by points in descending order
-                    usersData.sort((a, b) => b.points - a.points);
-
-                    if (usersData.length === 0) {
-                        leaderboardList.innerHTML = '<p class="text-gray-500">No users on the leaderboard yet.</p>';
-                        return;
-                    }
-
-                    const ol = document.createElement('ol');
-                    ol.className = 'list-decimal list-inside mt-3 text-base text-gray-600 space-y-1';
-
-                    usersData.slice(0, 10).forEach((user, index) => { // Show top 10
-                        const li = document.createElement('li');
-                        const displayId = user.userId === window.currentUserId ? `You (${user.userId.substring(0, 8)}...)` : `${user.userId.substring(0, 8)}...`;
-                        li.innerHTML = `<span class="font-semibold text-gray-800">${displayId}</span>: ${user.points} points`;
-                        ol.appendChild(li);
-                    });
-                    leaderboardList.appendChild(ol);
-                }, (error) => {
-                    console.error("Error fetching leaderboard:", error);
-                    // More specific error message for permissions
-                    if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
-                        leaderboardList.innerHTML = '<p class="text-red-500">Error loading leaderboard: Permission denied. Please ensure your Firebase Security Rules allow reading user profiles.</p>';
-                    } else {
-                        leaderboardList.innerHTML = '<p class="text-red-500">Error loading leaderboard.</p>';
-                    }
-                });
-            }
-            
             // Authenticate user and handle redirection
             onAuthStateChanged(auth, async (user) => {
                 const addEvidenceBtn = document.getElementById('addEvidenceBtn');
@@ -592,7 +591,7 @@
                 deepfakeDetectionOutput.innerHTML = `<p class="text-gray-800">${aiDetectionResult.replace(/\n/g, '<br>')}</p>`;
 
                 // Save analyzed article to user's history if logged in (not anonymous)
-                if (window.authInstance.currentUser && !window.authInstance.currentUser.isAnonymous) {
+                if (auth.currentUser && !auth.currentUser.isAnonymous) {
                     try {
                         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/analyzedArticles`), { // Use directly accessible db, collection, appId, userId
                             text: newsInput.substring(0, 500), // Save a snippet or full text
