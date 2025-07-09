@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Fake News Detection System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for Sentiment Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom styles for Inter font for body and Playfair Display for headings */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5dc; /* Cream/Beige for newspaper paper */
+            color: #36454F; /* Charcoal for main text */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        h1, h2 {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Ensure all elements have rounded corners - slightly less pronounced for newspaper feel */
+        * {
+            border-radius: 0.5rem;
+        }
+        /* Specific styling for card-like sections */
+        .card {
+            background-color: #ffffff; /* Clean white for content blocks */
+            padding: 2rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Softer shadow */
+            margin-bottom: 2rem;
+            border: 1px solid #d3d3d3; /* Light gray border for definition */
+        }
+        /* Style for interactive elements like buttons */
+        .btn {
+            padding: 0.85rem 1.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease; /* Faster, snappier transitions */
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+            border-radius: 0.375rem; /* Slightly less rounded for a classic feel */
+        }
+        .btn-primary {
+            background-color: #4a4a4a; /* Dark gray */
+            color: white;
+            box-shadow: none; /* No shadow for a flatter, newspaper print look */
+            border: 1px solid #333;
+        }
+        .btn-primary:hover {
+            background-color: #333; /* Darker gray on hover */
+            transform: none; /* No lift effect */
+        }
+        .btn-secondary {
+            background-color: #e0e0e0; /* Light gray */
+            color: #4a4a4a; /* Dark gray text */
+            border: 1px solid #b0b0b0; /* Muted border */
+        }
+        .btn-secondary:hover {
+            background-color: #c0c0c0; /* Darker light gray on hover */
+            color: #333;
+            transform: none; /* No lift effect */
+        }
+        /* Textarea styling */
+        textarea {
+            resize: vertical;
+            min-height: 180px;
+            border: 1px solid #b0b0b0; /* Muted border */
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        textarea:focus {
+            border-color: #888; /* Muted gray border on focus */
+            box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2); /* Soft gray glow */
+        }
+        /* Progress bar styling */
+        .progress-bar-container {
+            background-color: #e0e0e0; /* Light gray background for the bar */
+            height: 0.85rem;
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.3); /* Slightly softer text shadow */
+        }
+        /* Solid colors for progress bars based on score */
+        .score-low { background-color: #d32f2f; } /* Red */
+        .score-medium { background-color: #fbc02d; } /* Yellow */
+        .score-high { background-color: #388e3c; } /* Green */
+        .score-community { background-color: #1976d2; } /* Blue for community */
+
+        /* Chat window styling */
+        #chatWindow {
+            background-color: #fdfdfd; /* Off-white for chat */
+            border: 1px solid #d3d3d3;
+            height: 200px;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        #chatWindow > div {
+            margin-bottom: 0.75rem;
+        }
+        #chatInput {
+            border: 1px solid #b0b0b0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        #chatInput:focus {
+            border-color: #888;
+            box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2);
+        }
+        /* Message box styling */
+        .message-box {
+            background-color: rgba(0, 0, 0, 0.7); /* Darker overlay */
+        }
+        .message-box-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        /* Footer styling */
+        footer {
+            background-color: #36454F; /* Charcoal for footer */
+            color: #d3d3d3; /* Light gray text */
+            padding: 2.5rem 2rem;
+            text-align: center;
+            margin-top: 4rem;
+        }
+        footer a {
+            color: #a9a9a9; /* Muted gray links */
+            transition: color 0.2s ease;
+        }
+        footer a:hover {
+            color: #c0c0c0;
+        }
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-6 md:p-10">
+    <div class="max-w-7xl mx-auto flex-grow">
+        <!-- Header Section -->
+        <header class="text-center mb-10">
+            <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-3 leading-tight">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-gray-700 to-gray-900">
+                    The Daily Truth
+                </span>
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Uncovering the facts, one story at a time. Your trusted source for clarity in a complex world.
+            </p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Input and Core Detection -->
+            <div class="lg:col-span-2">
+                <!-- Input Area -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Analyze News Article</h2>
+                    <textarea id="newsInput" class="w-full p-4 border focus:outline-none focus:ring-0" placeholder="Paste the news article text or link here for analysis..."></textarea>
+                    <button id="analyzeBtn" class="btn btn-primary mt-6 w-full md:w-auto">
+                        Check News
+                    </button>
+                </section>
+
+                <!-- Explainable AI Auditor -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">The "Explainable AI" Auditor</h2>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Confidence Score:</p>
+                        <div id="confidenceScore" class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: 0%;">
+                                N/A
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Deep Dive Deconstruction:</p>
+                        <div id="deepDiveOutput" class="bg-gray-50 p-4 text-gray-700 leading-relaxed border">
+                            <!-- Placeholder for visual deconstruction (sentiment, NER, coreference) -->
+                            <p class="text-gray-500">Analysis results will appear here after you click "Check News".</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Propaganda Pattern Recognizer -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">The "Propaganda Pattern Recognizer"</h2>
+                    <div id="propagandaPatterns" class="bg-gray-50 p-4 text-gray-700 border">
+                        <!-- Placeholder for detected propaganda techniques -->
+                        <p class="text-gray-500">Identified propaganda techniques will be listed here.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Contextual Verification & Engagement -->
+            <div class="lg:col-span-1">
+                <!-- Source & Sentiment Navigator -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Source & Sentiment Navigator</h2>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Overall Trust Score:</p>
+                        <div id="trustScore" class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: 0%;">
+                                N/A
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Sentiment Change Over Time:</p>
+                        <div id="sentimentGraph" class="bg-gray-50 p-4 h-40 flex items-center justify-center text-gray-500 border">
+                            <!-- Canvas for Chart.js graph -->
+                            <canvas id="mySentimentChart"></canvas>
+                            <p class="text-gray-500 hidden">Sentiment analysis graph will be displayed here.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xl font-semibold text-gray-700 mb-3">Verified Counterpoints (Google Search):</p>
+                        <div id="verifiedCounterpoints" class="bg-gray-50 p-4 text-gray-700 border">
+                            <!-- Placeholder for Google Search results -->
+                            <p class="text-gray-500">Reputable news articles will appear here.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Counter-Narrative Generator -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">The "Counter-Narrative Generator"</h2>
+                    <div id="counterNarrative" class="bg-gray-50 p-4 text-gray-700 leading-relaxed border">
+                        <!-- Placeholder for generated counter-narratives -->
+                        <p class="text-gray-500">Evidence-based alternative viewpoints will be presented here.</p>
+                    </div>
+                </section>
+
+                <!-- Deepfake & AI-Generated Text Detector -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Deepfake & AI-Generated Text Detector</h2>
+                    <input type="file" id="mediaUpload" class="w-full p-3 border mb-4 focus:outline-none focus:ring-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
+                    <div id="deepfakeDetection" class="bg-gray-50 p-4 text-gray-700 border">
+                        <!-- Placeholder for detection results -->
+                        <p class="text-gray-500">Media analysis results will appear here.</p>
+                    </div>
+                </section>
+
+                <!-- Interactive Fact-Check Bot -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Interactive Fact-Check Bot</h2>
+                    <div id="chatWindow" class="bg-gray-50 p-4 h-56 overflow-y-auto mb-4 text-gray-700 border">
+                        <!-- Chat messages will appear here -->
+                        <div class="mb-3"><span class="font-semibold text-gray-700">Bot:</span> Hello! Paste a link or text, or ask me a question to fact-check.</div>
+                    </div>
+                    <input type="text" id="chatInput" class="w-full p-3 border focus:outline-none focus:ring-0" placeholder="Type your question or paste a link...">
+                    <button id="sendChatBtn" class="btn btn-primary mt-4 w-full">Send</button>
+                </section>
+
+                <!-- Community-Driven & Gamified Verification Network -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Community-Driven Verification Network</h2>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Community Consensus:</p>
+                        <div id="communityConsensus" class="progress-bar-container">
+                            <div class="progress-bar-fill score-community" style="width: 0%;">
+                                N/A
+                            </div>
+                        </div>
+                    </div>
+                    <div id="communityContributions" class="bg-gray-50 p-4 text-gray-700 border">
+                        <!-- Placeholder for community evidence and gamification -->
+                        <p class="text-gray-500">Community contributions and evidence will be displayed here.</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p class="text-sm">&copy; 2025 The Daily Truth. All rights reserved.</p>
+        <p class="text-sm mt-2">
+            <a href="#" class="hover:underline">Privacy Policy</a> |
+            <a href="#" class="ml-2 hover:underline">Terms of Service</a>
+        </p>
+    </footer>
+
+    <script>
+        // Function to display a custom message box
+        function showMessageBox(message) {
+            const messageBox = document.createElement('div');
+            messageBox.className = 'fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 message-box';
+            messageBox.innerHTML = `
+                <div class="bg-white p-8 rounded-xl shadow-2xl text-center message-box-content">
+                    <p class="text-2xl font-bold text-gray-800 mb-6">${message}</p>
+                    <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+                </div>
+            `;
+            document.body.appendChild(messageBox);
+        }
+
+        // Initialize Chart.js instance outside the event listener
+        let sentimentChart;
+
+        // Function to update sentiment graph
+        function updateSentimentGraph(sentimentData) {
+            const ctx = document.getElementById('mySentimentChart').getContext('2d');
+
+            if (sentimentChart) {
+                sentimentChart.destroy(); // Destroy existing chart before creating a new one
+            }
+
+            sentimentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Past', 'Recent', 'Current'], // Simplified labels for simulation
+                    datasets: [{
+                        label: 'Sentiment Score',
+                        data: sentimentData,
+                        borderColor: '#4a4a4a', // Muted line color
+                        backgroundColor: 'rgba(74, 74, 74, 0.2)', // Muted fill color
+                        borderWidth: 2,
+                        tension: 0.3, // Smooth curve
+                        pointBackgroundColor: '#36454F',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        title: {
+                            display: true,
+                            text: 'Sentiment Change Over Time (Simulated)',
+                            color: '#36454F', // Charcoal title
+                            font: {
+                                family: 'Inter',
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                            },
+                            ticks: {
+                                color: '#666', // Muted tick color
+                                font: {
+                                    family: 'Inter'
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: '#e0e0e0', // Lighter grid lines
+                            },
+                            ticks: {
+                                color: '#666', // Muted tick color
+                                font: {
+                                    family: 'Inter'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // Function to call Gemini API for text analysis (Explainable AI Auditor, Propaganda)
+        async function analyzeTextWithGemini(text) {
+            let chatHistory = [];
+            // Prompt for Explainable AI Auditor and Propaganda Pattern Recognizer
+            chatHistory.push({ role: "user", parts: [{ text: `Analyze the following news article text for potential misinformation, emotional language, logical fallacies, or deceptive patterns.
+            
+            Provide a concise explanation of *why* it might be considered misleading or biased, highlighting specific phrases or characteristics.
+            
+            Then, identify any specific propaganda techniques used.
+            
+            Format your response clearly as two distinct sections:
+            
+            Deep Dive Analysis: [Your detailed explanation here, including specific examples from the text.]
+            
+            Propaganda Patterns Detected: [List of identified propaganda techniques, e.g., "Ad Hominem", "Cherry-Picking", "False Dilemma". If none, state "None identified." If the text is too short or lacks sufficient content for analysis, state "Insufficient content for detailed analysis." If the text is factual and unbiased, state "No significant misinformation or propaganda detected."]
+            
+            News Article Text:
+            "${text}"` }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error('Gemini API HTTP Error (Analyze):', response.status, errorBody);
+                    return `Error: API request failed with status ${response.status}. Details: ${errorBody.error?.message || JSON.stringify(errorBody)}`;
+                }
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const analysisText = result.candidates[0].content.parts[0].text;
+                    return analysisText;
+                } else {
+                    console.error('Gemini API response structure unexpected (Analyze):', result);
+                    console.error('Full unexpected Gemini API result (Analyze):', result);
+                    return 'Error: Could not get analysis from AI. The AI response structure was unexpected.';
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API (Analyze):', error);
+                return `Error: Failed to connect to AI analysis service. Please check your network connection or try again later.`;
+            }
+        }
+
+        // Function to call Gemini API for Counter-Narrative Generation
+        async function generateCounterNarrative(originalText, analysis) {
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: `Based on the following news article text and its analysis for misinformation/propaganda, generate a neutral, factual counter-narrative. Focus on presenting verified, unbiased information that addresses the misleading aspects without being confrontational. If the original text was mostly factual, state that it appears balanced.
+            
+            Original Article Text:
+            "${originalText}"
+            
+            Analysis:
+            "${analysis}"
+            
+            Counter-Narrative:` }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error('Gemini API HTTP Error (Counter-Narrative):', response.status, errorBody);
+                    return `Error generating counter-narrative: API request failed with status ${response.status}.`;
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error('Gemini API response structure unexpected (Counter-Narrative):', result);
+                    return 'Error: Could not generate counter-narrative.';
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API (Counter-Narrative):', error);
+                return `Error: Failed to generate counter-narrative.`;
+            }
+        }
+
+        // Function to call Gemini API for AI-Generated Text Detection
+        async function detectAIText(text) {
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: `Analyze the following text for patterns indicative of AI generation (e.g., unusual phrasing, lack of nuanced opinion, repetitive structures, overly formal or generic language). Provide a concise assessment. If it appears AI-generated, state "Potential AI-Generated Text Detected." If not, state "Text appears human-written." If unsure, state "Assessment inconclusive."
+            
+            Text for analysis:
+            "${text}"` }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error('Gemini API HTTP Error (AI Detect):', response.status, errorBody);
+                    return `Error detecting AI text: API request failed with status ${response.status}.`;
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error('Gemini API response structure unexpected (AI Detect):', result);
+                    return 'Error: Could not detect AI text.';
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API (AI Detect):', error);
+                return `Error: Failed to detect AI text.`;
+            }
+        }
+
+        // Function to simulate Google Search results
+        async function performGoogleSearch(query) {
+            // Simulate a network delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Generate some dummy search results based on the query
+            const dummyResults = [
+                { title: `Fact-Check: Is "${query.substring(0, Math.min(query.length, 30))}" True?`, url: `https://www.reputable-news.com/fact-check?q=${encodeURIComponent(query)}` },
+                { title: `Expert Analysis on "${query.substring(0, Math.min(query.length, 30))}"`, url: `https://www.academic-journal.org/analysis?q=${encodeURIComponent(query)}` },
+                { title: `Breaking News: "${query.substring(0, Math.min(query.length, 30))}" - The Full Story`, url: `https://www.major-news-outlet.com/story?q=${encodeURIComponent(query)}` },
+                { title: `Understanding the Context of "${query.substring(0, Math.min(query.length, 30))}"`, url: `https://www.thinktank.org/context?q=${encodeURIComponent(query)}` }
+            ];
+
+            return dummyResults;
+        }
+
+
+        document.getElementById('analyzeBtn').addEventListener('click', async function() {
+            const newsInput = document.getElementById('newsInput').value;
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const deepDiveOutput = document.getElementById('deepDiveOutput');
+            const propagandaPatterns = document.getElementById('propagandaPatterns');
+            const verifiedCounterpoints = document.getElementById('verifiedCounterpoints');
+            const counterNarrativeOutput = document.getElementById('counterNarrative');
+            const deepfakeDetectionOutput = document.getElementById('deepfakeDetection');
+            const sentimentGraphContainer = document.getElementById('sentimentGraph');
+
+
+            if (newsInput.trim() === '') {
+                showMessageBox('Please enter some news text or a link to analyze.');
+                return;
+            }
+
+            // Show loading state for all sections
+            analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+            analyzeBtn.disabled = true;
+            deepDiveOutput.innerHTML = '<p class="text-gray-500">Analyzing text, please wait...</p>';
+            propagandaPatterns.innerHTML = '<p class="text-gray-500">Detecting patterns...</p>';
+            verifiedCounterpoints.innerHTML = '<p class="text-gray-500">Searching for verified counterpoints...</p>';
+            counterNarrativeOutput.innerHTML = '<p class="text-gray-500">Generating counter-narrative...</p>';
+            deepfakeDetectionOutput.innerHTML = '<p class="text-gray-500">Checking for AI-generated text...</p>';
+            sentimentGraphContainer.innerHTML = '<p class="text-gray-500">Generating sentiment graph...</p>'; // Clear for chart
+
+
+            // Simulate analysis results for progress bars (these remain random for now)
+            const confidenceScoreFill = document.querySelector('#confidenceScore .progress-bar-fill');
+            const trustScoreFill = document.querySelector('#trustScore .progress-bar-fill');
+            const communityConsensusFill = document.querySelector('#communityConsensus .progress-bar-fill');
+
+            const randomConfidence = Math.floor(Math.random() * 101); // 0-100
+            const randomTrust = Math.floor(Math.random() * 101); // 0-100
+            const randomCommunity = Math.floor(Math.random() * 101); // 0-100
+
+            // Apply appropriate class based on score for visual feedback
+            function updateProgressBar(element, score, isCommunity = false) {
+                element.style.width = `${score}%`;
+                element.textContent = `${score}%`;
+                element.classList.remove('score-low', 'score-medium', 'score-high', 'score-community');
+                if (isCommunity) {
+                    element.classList.add('score-community');
+                } else if (score < 40) {
+                    element.classList.add('score-low');
+                } else if (score < 75) {
+                    element.classList.add('score-medium');
+                } else {
+                    element.classList.add('score-high');
+                }
+            }
+
+            updateProgressBar(confidenceScoreFill, randomConfidence);
+            updateProgressBar(trustScoreFill, randomTrust);
+            updateProgressBar(communityConsensusFill, randomCommunity, true);
+
+            // Simulate sentiment data for the graph
+            const simulatedSentimentData = [
+                Math.floor(Math.random() * 100),
+                Math.floor(Math.random() * 100),
+                Math.floor(Math.random() * 100)
+            ];
+            // Ensure the canvas element is present before updating the graph
+            sentimentGraphContainer.innerHTML = '<canvas id="mySentimentChart"></canvas>';
+            updateSentimentGraph(simulatedSentimentData);
+
+
+            // Perform all AI analysis and Google Search concurrently
+            const [analysisResult, searchResults, aiDetectionResult] = await Promise.all([
+                analyzeTextWithGemini(newsInput),
+                performGoogleSearch(newsInput.substring(0, 100)), // Use a snippet of the input for search query
+                detectAIText(newsInput) // Call AI text detection
+            ]);
+
+            // Update Explainable AI Auditor and Propaganda Pattern Recognizer
+            const deepDiveRegex = /Deep Dive Analysis:([\s\S]*?)(?=Propaganda Patterns Detected:|$)/;
+            const propagandaRegex = /Propaganda Patterns Detected:([\s\S]*)/;
+
+            const deepDiveMatch = analysisResult.match(deepDiveRegex);
+            const propagandaMatch = analysisResult.match(propagandaRegex);
+
+            if (deepDiveMatch && deepDiveMatch[1]) {
+                deepDiveOutput.innerHTML = `<p class="text-gray-800">${deepDiveMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
+            } else {
+                deepDiveOutput.innerHTML = `<p class="text-gray-800">Deep Dive Analysis: ${analysisResult.replace(/\n/g, '<br>')}</p>`;
+            }
+
+            if (propagandaMatch && propagandaMatch[1]) {
+                propagandaPatterns.innerHTML = `<p class="text-gray-800">${propagandaMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
+            } else if (!deepDiveMatch) {
+                propagandaPatterns.innerHTML = `<p class="text-gray-800">Propaganda Patterns Detected: No specific patterns identified or analysis was general.</p>`;
+            }
+
+            // Update Verified Counterpoints (Google Search)
+            if (searchResults && searchResults.length > 0) {
+                let resultsHtml = '<p class="text-gray-800">Highly relevant and reputable news articles:</p><ul class="list-disc list-inside mt-3 text-base text-gray-600 space-y-1">';
+                searchResults.forEach(result => {
+                    resultsHtml += `<li><a href="${result.url}" target="_blank" class="text-gray-700 hover:underline font-medium">${result.title}</a></li>`;
+                });
+                resultsHtml += '</ul>';
+                verifiedCounterpoints.innerHTML = resultsHtml;
+            } else {
+                verifiedCounterpoints.innerHTML = '<p class="text-gray-800">No verified counterpoints found for this topic.</p>';
+            }
+
+            // Generate and update Counter-Narrative
+            const counterNarrativeText = await generateCounterNarrative(newsInput, analysisResult);
+            counterNarrativeOutput.innerHTML = `<p class="text-gray-800">${counterNarrativeText.replace(/\n/g, '<br>')}</p>`;
+
+            // Update Deepfake & AI-Generated Text Detector
+            deepfakeDetectionOutput.innerHTML = `<p class="text-gray-800">${aiDetectionResult.replace(/\n/g, '<br>')}</p>`;
+
+
+            // Reset button state
+            analyzeBtn.innerHTML = 'Check News';
+            analyzeBtn.disabled = false;
+        });
+
+        document.getElementById('sendChatBtn').addEventListener('click', async function() {
+            const chatInput = document.getElementById('chatInput');
+            const chatWindow = document.getElementById('chatWindow');
+            const userMessage = chatInput.value.trim();
+
+            if (userMessage === '') {
+                return;
+            }
+
+            // Add user message to chat window
+            const userDiv = document.createElement('div');
+            userDiv.className = 'text-right mb-3';
+            userDiv.innerHTML = `<span class="font-semibold text-gray-700">You:</span> ${userMessage}`;
+            chatWindow.appendChild(userDiv);
+
+            // Show loading for bot response
+            const botDiv = document.createElement('div');
+            botDiv.className = 'text-left mb-3';
+            botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> <span class="spinner"></span> Thinking...`;
+            chatWindow.appendChild(botDiv);
+
+            chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom
+
+            chatInput.value = ''; // Clear input
+
+            // Simulate bot response with Gemini API call for fact-checking
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: `Act as a helpful and concise fact-checking bot. Provide an instant assessment in natural language for the following query or text. If relevant, proactively ask if the user wants to see how reputable news sources are covering this, and if so, suggest a Google Search link.
+            
+            User query/text: "${userMessage}"` }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error('Gemini API HTTP Error (Chat Bot):', response.status, errorBody);
+                    botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Fact-check service failed with status ${response.status}.`;
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const botResponseText = result.candidates[0].content.parts[0].text;
+                    // Replace the loading spinner with the actual response
+                    botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> ${botResponseText.replace(/\n/g, '<br>')}`;
+                } else {
+                    botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Could not get a response from the fact-check bot.`;
+                    console.error('Gemini API response structure unexpected for chat bot:', result);
+                }
+            } catch (error) {
+                botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Failed to connect to the fact-check bot service.`;
+                console.error('Error calling Gemini API for chat bot:', error);
+            } finally {
+                chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom again
+            }
+        });
+
+        // Allow pressing Enter to send chat message
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('sendChatBtn').click();
+            }
+        });
+    </script>
+</body>
+</html>

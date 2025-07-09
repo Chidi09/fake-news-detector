@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Daily Truth - Verify Facts</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for Inter font for body and Playfair Display for headings */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5dc; /* Cream/Beige for newspaper paper */
+            color: #36454F; /* Charcoal for main text */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Ensure body takes full viewport height */
+        }
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Ensure all elements have rounded corners - slightly less pronounced for newspaper feel */
+        * {
+            border-radius: 0.5rem;
+        }
+        /* Hero section specific styling */
+        .hero-section {
+            background: #36454F; /* Dark charcoal background for hero */
+            color: white;
+            padding: 8rem 2rem; /* Generous padding */
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1; /* Allow hero to grow and fill space */
+            border-bottom: 5px solid #d3d3d3; /* Strong bottom border like a newspaper fold */
+        }
+        .hero-title {
+            font-size: 4.5rem; /* Extra large title */
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Subtle text shadow */
+        }
+        .hero-subtitle {
+            font-size: 1.75rem; /* Large subtitle */
+            max-width: 700px;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+            color: #e0e0e0; /* Lighter text for contrast */
+        }
+        .btn {
+            padding: 1rem 2.5rem; /* Larger padding for hero button */
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.05em; /* More letter spacing */
+            text-transform: uppercase;
+            border-radius: 0.375rem;
+            box-shadow: none; /* No shadow for a flatter, newspaper print look */
+        }
+        .btn-hero-primary {
+            background-color: #ffffff;
+            color: #36454F; /* Charcoal text */
+            border: 1px solid #36454F;
+        }
+        .btn-hero-primary:hover {
+            background-color: #e0e0e0; /* Lighter gray on hover */
+            transform: none; /* No lift effect */
+        }
+
+        /* Features section styling */
+        .features-section {
+            padding: 6rem 2rem;
+            background-color: #f5f5dc; /* Match body background */
+            text-align: center;
+        }
+        .feature-card {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Softer shadow */
+            border: 1px solid #d3d3d3;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .feature-card:hover {
+            transform: none; /* No lift effect */
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+        .feature-icon {
+            font-size: 3rem;
+            color: #4a4a4a; /* Muted icon color */
+            margin-bottom: 1.5rem;
+        }
+
+        /* Footer styling */
+        footer {
+            background-color: #36454F; /* Charcoal for footer */
+            color: #d3d3d3; /* Light gray text */
+            padding: 2.5rem 2rem;
+            text-align: center;
+            margin-top: auto; /* Push footer to the bottom */
+        }
+        footer a {
+            color: #a9a9a9; /* Muted gray links */
+            transition: color 0.2s ease;
+        }
+        footer a:hover {
+            color: #c0c0c0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="hero-title font-extrabold">
+                The <span class="text-white">Daily Truth.</span> Unbiased Reporting.
+            </h1>
+            <p class="hero-subtitle font-light">
+                In an age of information overload, our system cuts through the noise, providing clarity, context, and verifiable facts.
+            </p>
+            <a href="app.html" class="btn btn-hero-primary inline-block">
+                Start Fact-Checking
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section (Optional, but good for a landing page) -->
+    <section class="features-section">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-4xl font-bold text-gray-800 mb-12">Our Commitment to Clarity</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="feature-card">
+                    <div class="feature-icon">📰</div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-3">Explainable Insights</h3>
+                    <p class="text-gray-600">Go beyond the headline. Understand the nuances of truth and deception.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-3">Verified Sources</h3>
+                    <p class="text-gray-600">Access counterpoints and original reporting from trusted news organizations.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👁️‍🗨️</div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-3">Next-Gen Detection</h3>
+                    <p class="text-gray-600">Leveraging advanced AI to spot deepfakes and subtle propaganda.</p>
+                </div>
+            </div>
+            <div class="mt-12">
+                <a href="app.html" class="btn btn-primary inline-block">
+                    Explore Our System
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-auto">
+        <p class="text-sm">&copy; 2025 The Daily Truth. All rights reserved.</p>
+        <p class="text-sm mt-2">
+            <a href="#" class="hover:underline">Privacy Policy</a> |
+            <a href="#" class="ml-2 hover:underline">Terms of Service</a>
+        </p>
+    </footer>
+
+</body>
+</html>
