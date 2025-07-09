@@ -301,296 +301,730 @@
             return dummyResults;
         }
 
+        // All DOM-related interactions and event listeners should be inside DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Authenticate user and handle redirection
+            onAuthStateChanged(auth, async (user) => {
+                const addEvidenceBtn = document.getElementById('addEvidenceBtn');
+                const authStatusDisplay = document.getElementById('authStatusDisplay');
+                const logoutButton = document.getElementById('logoutButton');
+                const myProfileLink = document.getElementById('myProfileLink');
+                const personalizedNewsLink = document.getElementById('personalizedNewsLink'); // New element
+                const anonymousContributionMessage = document.getElementById('anonymousContributionMessage');
 
-        document.getElementById('analyzeBtn').addEventListener('click', async function() {
-            const newsInput = document.getElementById('newsInput').value;
-            const analyzeBtn = document.getElementById('analyzeBtn');
-            const deepDiveOutput = document.getElementById('deepDiveOutput');
-            const propagandaPatterns = document.getElementById('propagandaPatterns');
-            const verifiedCounterpoints = document.getElementById('verifiedCounterpoints');
-            const counterNarrativeOutput = document.getElementById('counterNarrative');
-            const deepfakeDetectionOutput = document.getElementById('deepfakeDetection');
-            const sentimentGraphContainer = document.getElementById('sentimentGraph');
+                if (user) {
+                    userId = user.uid;
+                    console.log("Authenticated with Firebase. User ID:", userId);
+                    
+                    // Update UI based on user type
+                    if (user.isAnonymous) {
+                        authStatusDisplay.textContent = `Signed in as: Anonymous`;
+                        logoutButton.classList.add('hidden'); // Hide logout for anonymous
+                        myProfileLink.classList.add('hidden'); // Hide profile link for anonymous
+                        personalizedNewsLink.classList.add('hidden'); // Hide personalized news for anonymous
+                        addEvidenceBtn.disabled = true; // Disable contribution for anonymous
+                        anonymousContributionMessage.classList.remove('hidden'); // Show message
+                        // If anonymous, redirect to auth page to encourage sign-up
+                        if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
+                            window.location.href = 'auth.html';
+                        }
+                    } else {
+                        authStatusDisplay.textContent = `Signed in as: ${user.email}`;
+                        logoutButton.classList.remove('hidden'); // Show logout button for logged-in users
+                        myProfileLink.classList.remove('hidden'); // Show profile link for logged-in users
+                        personalizedNewsLink.classList.remove('hidden'); // Show personalized news for logged-in users
+                        addEvidenceBtn.disabled = false; // Enable contribution for authenticated users
+                        anonymousContributionMessage.classList.add('hidden'); // Hide message
+                    }
 
+                    document.getElementById('currentUserIdDisplay').textContent = `Your User ID: ${userId.substring(0, 8)}...`;
+                    
+                    // Fetch user points
+                    const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/data`);
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (userDocSnap.exists()) {
+                        userPoints = userDocSnap.data().points || 0;
+                    } else {
+                        // Create user profile if it doesn't exist
+                        await setDoc(userDocRef, { points: 0, createdAt: serverTimestamp() });
+                    }
+                    document.getElementById('currentUserPointsDisplay').textContent = `Your Points: ${userPoints}`;
 
-            if (newsInput.trim() === '') {
-                showMessageBox('Please enter some news text or a link to analyze.');
-                return;
-            }
-
-            // Show loading state for all sections
-            analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
-            analyzeBtn.disabled = true;
-            deepDiveOutput.innerHTML = '<p class="text-gray-500">Analyzing text, please wait...</p>';
-            propagandaPatterns.innerHTML = '<p class="text-gray-500">Detecting patterns...</p>';
-            verifiedCounterpoints.innerHTML = '<p class="text-gray-500">Searching for verified counterpoints...</p>';
-            counterNarrativeOutput.innerHTML = '<p class="text-gray-500">Generating counter-narrative...</p>';
-            deepfakeDetectionOutput.innerHTML = '<p class="text-gray-500">Checking for AI-generated text...</p>';
-            sentimentGraphContainer.innerHTML = '<p class="text-gray-500">Generating sentiment graph...</p>'; // Clear for chart
-
-
-            // Simulate analysis results for progress bars (these remain random for now)
-            const confidenceScoreFill = document.querySelector('#confidenceScore .progress-bar-fill');
-            const trustScoreFill = document.querySelector('#trustScore .progress-bar-fill');
-            const communityConsensusFill = document.querySelector('#communityConsensus .progress-bar-fill');
-
-            const randomConfidence = Math.floor(Math.random() * 101); // 0-100
-            const randomTrust = Math.floor(Math.random() * 101); // 0-100
-            const randomCommunity = Math.floor(Math.random() * 101); // 0-100
-
-            // Apply appropriate class based on score for visual feedback
-            function updateProgressBar(element, score, isCommunity = false) {
-                element.style.width = `${score}%`;
-                element.textContent = `${score}%`;
-                element.classList.remove('score-low', 'score-medium', 'score-high', 'score-community');
-                if (isCommunity) {
-                    element.classList.add('score-community');
-                } else if (score < 40) {
-                    element.classList.add('score-low');
-                } else if (score < 75) {
-                    element.classList.add('score-medium');
                 } else {
-                    element.classList.add('score-high');
+                    // User is signed out. Redirect to auth.html.
+                    console.log("User not authenticated. Redirecting to auth.html");
+                    if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
+                        window.location.href = 'auth.html';
+                    }
+                    addEvidenceBtn.disabled = true; // Keep button disabled if not authenticated
+                    anonymousContributionMessage.classList.remove('hidden'); // Show message
+                    authStatusDisplay.textContent = "Not signed in. Redirecting...";
+                    logoutButton.classList.add('hidden'); // Hide logout if not signed in
+                    myProfileLink.classList.add('hidden'); // Hide profile link if not signed in
+                    personalizedNewsLink.classList.add('hidden'); // Hide personalized news for anonymous
                 }
-            }
+                // Make userId and userPoints globally available after authentication
+                window.currentUserId = userId;
+                window.userPoints = userPoints;
+                window.authInstance = auth; // Expose auth instance
+                window.signOut = signOut; // Expose signOut
 
-            updateProgressBar(confidenceScoreFill, randomConfidence);
-            updateProgressBar(trustScoreFill, randomTrust);
-            updateProgressBar(communityConsensusFill, randomCommunity, true);
+                // Expose db and appId for saving analyzed articles
+                window.db = db;
+                window.appId = appId;
+                window.collection = collection;
+                window.addDoc = addDoc;
+                window.serverTimestamp = serverTimestamp;
 
-            // Simulate sentiment data for the graph
-            const simulatedSentimentData = [
-                Math.floor(Math.random() * 100),
-                Math.floor(Math.random() * 100),
-                Math.floor(Math.random() * 100)
-            ];
-            // Ensure the canvas element is present before updating the graph
-            sentimentGraphContainer.innerHTML = '<canvas id="mySentimentChart"></canvas>';
-            updateSentimentGraph(simulatedSentimentData);
-
-
-            // Perform all AI analysis and Google Search concurrently
-            const [analysisResult, searchResults, aiDetectionResult] = await Promise.all([
-                analyzeTextWithGemini(newsInput),
-                performGoogleSearch(newsInput.substring(0, 100)), // Use a snippet of the input for search query
-                detectAIText(newsInput) // Call AI text detection
-            ]);
-
-            // Update Explainable AI Auditor and Propaganda Pattern Recognizer
-            const deepDiveRegex = /Deep Dive Analysis:([\s\S]*?)(?=Propaganda Patterns Detected:|$)/;
-            const propagandaRegex = /Propaganda Patterns Detected:([\s\S]*)/;
-
-            const deepDiveMatch = analysisResult.match(deepDiveRegex);
-            const propagandaMatch = analysisResult.match(propagandaRegex);
-
-            if (deepDiveMatch && deepDiveMatch[1]) {
-                deepDiveOutput.innerHTML = `<p class="text-gray-800">${deepDiveMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
-            } else {
-                deepDiveOutput.innerHTML = `<p class="text-gray-800">Deep Dive Analysis: ${analysisResult.replace(/\n/g, '<br>')}</p>`;
-            }
-
-            if (propagandaMatch && propagandaMatch[1]) {
-                propagandaPatterns.innerHTML = `<p class="text-gray-800">${propagandaMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
-            } else if (!deepDiveMatch) {
-                propagandaPatterns.innerHTML = `<p class="text-gray-800">Propaganda Patterns Detected: No specific patterns identified or analysis was general.</p>`;
-            }
-
-            // Update Verified Counterpoints (Google Search)
-            if (searchResults && searchResults.length > 0) {
-                let resultsHtml = '<p class="text-gray-800">Highly relevant and reputable news articles:</p><ul class="list-disc list-inside mt-3 text-base text-gray-600 space-y-1">';
-                searchResults.forEach(result => {
-                    resultsHtml += `<li><a href="${result.url}" target="_blank" class="text-gray-700 hover:underline hover-effect-link font-medium">${result.title}</a></li>`;
-                });
-                resultsHtml += '</ul>';
-                verifiedCounterpoints.innerHTML = resultsHtml;
-            } else {
-                verifiedCounterpoints.innerHTML = '<p class="text-gray-800">No verified counterpoints found for this topic.</p>';
-            }
-
-            // Generate and update Counter-Narrative
-            const counterNarrativeText = await generateCounterNarrative(newsInput, analysisResult);
-            counterNarrativeOutput.innerHTML = `<p class="text-gray-800">${counterNarrativeText.replace(/\n/g, '<br>')}</p>`;
-
-            // Update Deepfake & AI-Generated Text Detector
-            deepfakeDetectionOutput.innerHTML = `<p class="text-gray-800">${aiDetectionResult.replace(/\n/g, '<br>')}</p>`;
-
-            // Save analyzed article to user's history if logged in (not anonymous)
-            if (window.authInstance.currentUser && !window.authInstance.currentUser.isAnonymous) {
-                try {
-                    await window.addDoc(window.collection(window.db, `artifacts/${window.appId}/users/${window.currentUserId}/analyzedArticles`), {
-                        text: newsInput.substring(0, 500), // Save a snippet or full text
-                        analysisSummary: analysisResult.substring(0, 200), // Save a summary
-                        timestamp: window.serverTimestamp()
-                    });
-                    console.log("Analyzed article saved to user history.");
-                } catch (error) {
-                    console.error("Error saving analyzed article to user history:", error);
-                }
-            }
+                // Initialize Firestore listener after authentication
+                setupCommunityContributionsListener(db, appId);
+                setupLeaderboardListener(db, appId); // Setup leaderboard listener
+            });
 
 
-            // Reset button state
-            analyzeBtn.innerHTML = 'Check News';
-            analyzeBtn.disabled = false;
-        });
-
-        document.getElementById('addEvidenceBtn').addEventListener('click', async function() {
-            const evidenceLink = document.getElementById('evidenceLinkInput').value.trim();
-            const evidenceComment = document.getElementById('evidenceCommentInput').value.trim();
-
-            if (!evidenceLink || !evidenceComment) {
-                showMessageBox('Please provide both a link and a comment for your evidence.');
-                return;
-            }
-
-            // Access Firebase instances from the global window object
-            const db = window.db;
-            const addDoc = window.addDoc;
-            const collection = window.collection;
-            const serverTimestamp = window.serverTimestamp;
-            const appId = window.appId;
-            const currentUserId = window.currentUserId;
-            const doc = window.doc;
-            const updateDoc = window.updateDoc;
-            const getDoc = window.getDoc;
-            const setDoc = window.setDoc;
-
-            // IMPORTANT: Only allow authenticated (non-anonymous) users to submit evidence
-            if (!window.authInstance.currentUser || window.authInstance.currentUser.isAnonymous) {
-                showMessageBox('Please sign up or log in with an email account to submit evidence.');
-                return;
-            }
+            document.getElementById('analyzeBtn').addEventListener('click', async function() {
+                const newsInput = document.getElementById('newsInput').value;
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                const deepDiveOutput = document.getElementById('deepDiveOutput');
+                const propagandaPatterns = document.getElementById('propagandaPatterns');
+                const verifiedCounterpoints = document.getElementById('verifiedCounterpoints');
+                const counterNarrativeOutput = document.getElementById('counterNarrative');
+                const deepfakeDetectionOutput = document.getElementById('deepfakeDetection');
+                const sentimentGraphContainer = document.getElementById('sentimentGraph');
 
 
-            if (!db || !addDoc || !collection || !serverTimestamp || !appId || !currentUserId || !doc || !updateDoc || !getDoc || !setDoc) {
-                console.error("Firebase services not fully initialized or user not authenticated.");
-                showMessageBox("Error: Firebase services not ready. Please try again.");
-                return;
-            }
-
-            try {
-                // Add contribution to public collection
-                await addDoc(collection(db, `artifacts/${appId}/public/data/communityContributions`), {
-                    link: evidenceLink,
-                    comment: evidenceComment,
-                    userId: currentUserId,
-                    timestamp: serverTimestamp(),
-                    points: 10 // Award 10 points for each contribution
-                });
-
-                // Update user's points
-                const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/data`);
-                const userDocSnap = await getDoc(userDocRef);
-                let currentPoints = 0;
-                if (userDocSnap.exists()) {
-                    currentPoints = userDocSnap.data().points || 0;
-                    await updateDoc(userDocRef, { points: currentPoints + 10 });
-                } else {
-                    // This case should ideally not happen if onAuthStateChanged works, but as a fallback
-                    await setDoc(userDocRef, { points: 10, createdAt: serverTimestamp() });
-                }
-                window.userPoints = currentPoints + 10; // Update global points
-                document.getElementById('currentUserPointsDisplay').textContent = `Your Points: ${window.userPoints}`;
-
-
-                showMessageBox('Evidence submitted successfully! You earned 10 points.');
-                document.getElementById('evidenceLinkInput').value = '';
-                document.getElementById('evidenceCommentInput').value = '';
-            } catch (error) {
-                console.error("Error submitting evidence or updating points:", error);
-                showMessageBox("Error submitting evidence. Please try again.");
-            }
-        });
-
-
-        document.getElementById('sendChatBtn').addEventListener('click', async function() {
-            const chatInput = document.getElementById('chatInput');
-            const chatWindow = document.getElementById('chatWindow');
-            const userMessage = chatInput.value.trim();
-
-            if (userMessage === '') {
-                return;
-            }
-
-            // Add user message to chat window
-            const userDiv = document.createElement('div');
-            userDiv.className = 'text-right mb-3';
-            userDiv.innerHTML = `<span class="font-semibold text-gray-700">You:</span> ${userMessage}`;
-            chatWindow.appendChild(userDiv);
-
-            // Show loading for bot response
-            const botDiv = document.createElement('div');
-            botDiv.className = 'text-left mb-3';
-            botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> <span class="spinner"></span> Thinking...`;
-            chatWindow.appendChild(botDiv);
-
-            chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom
-
-            chatInput.value = ''; // Clear input
-
-            // Simulate bot response with Gemini API call for fact-checking
-            let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: `Act as a helpful and concise fact-checking bot. Provide an instant assessment in natural language for the following query or text. If relevant, proactively ask if the user wants to see how reputable news sources are covering this, and if so, suggest a Google Search link.
-            
-            User query/text: "${userMessage}"` }] });
-
-            const payload = { contents: chatHistory };
-            // Use the API key from firebaseConfig
-            const apiKey = window.firebaseConfig.apiKey; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    console.error('Gemini API HTTP Error (Chat Bot):', response.status, errorBody);
-                    botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Fact-check service failed with status ${response.status}.`;
+                if (newsInput.trim() === '') {
+                    showMessageBox('Please enter some news text or a link to analyze.');
                     return;
                 }
 
-                const result = await response.json();
+                // Show loading state for all sections
+                analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+                analyzeBtn.disabled = true;
+                deepDiveOutput.innerHTML = '<p class="text-gray-500">Analyzing text, please wait...</p>';
+                propagandaPatterns.innerHTML = '<p class="text-gray-500">Detecting patterns...</p>';
+                verifiedCounterpoints.innerHTML = '<p class="text-gray-500">Searching for verified counterpoints...</p>';
+                counterNarrativeOutput.innerHTML = '<p class="text-gray-500">Generating counter-narrative...</p>';
+                deepfakeDetectionOutput.innerHTML = '<p class="text-gray-500">Checking for AI-generated text...</p>';
+                sentimentGraphContainer.innerHTML = '<p class="text-gray-500">Generating sentiment graph...</p>'; // Clear for chart
 
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const botResponseText = result.candidates[0].content.parts[0].text;
-                    // Replace the loading spinner with the actual response
-                    botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> ${botResponseText.replace(/\n/g, '<br>')}`;
-                } else {
-                    botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Could not get a response from the fact-check bot.`;
-                    console.error('Gemini API response structure unexpected for chat bot:', result);
+
+                // Simulate analysis results for progress bars (these remain random for now)
+                const confidenceScoreFill = document.querySelector('#confidenceScore .progress-bar-fill');
+                const trustScoreFill = document.querySelector('#trustScore .progress-bar-fill');
+                const communityConsensusFill = document.querySelector('#communityConsensus .progress-bar-fill');
+
+                const randomConfidence = Math.floor(Math.random() * 101); // 0-100
+                const randomTrust = Math.floor(Math.random() * 101); // 0-100
+                const randomCommunity = Math.floor(Math.random() * 101); // 0-100
+
+                // Apply appropriate class based on score for visual feedback
+                function updateProgressBar(element, score, isCommunity = false) {
+                    element.style.width = `${score}%`;
+                    element.textContent = `${score}%`;
+                    element.classList.remove('score-low', 'score-medium', 'score-high', 'score-community');
+                    if (isCommunity) {
+                        element.classList.add('score-community');
+                    } else if (score < 40) {
+                        element.classList.add('score-low');
+                    } else if (score < 75) {
+                        element.classList.add('score-medium');
+                    } else {
+                        element.classList.add('score-high');
+                    }
                 }
-            } catch (error) {
-                botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Failed to connect to the fact-check bot service.`;
-                console.error('Error calling Gemini API for chat bot:', error);
-            } finally {
-                chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom again
-            }
-        });
 
-        // Allow pressing Enter to send chat message
-        document.getElementById('chatInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('sendChatBtn').click();
-            }
-        });
+                updateProgressBar(confidenceScoreFill, randomConfidence);
+                updateProgressBar(trustScoreFill, randomTrust);
+                updateProgressBar(communityConsensusFill, randomCommunity, true);
 
-        // Logout button event listener
-        document.getElementById('logoutButton').addEventListener('click', async () => {
-            try {
-                await window.signOut(window.authInstance); // Use the globally exposed signOut and authInstance
-                // Redirect to auth.html after successful logout
-                window.location.href = 'auth.html';
-            } catch (error) {
-                console.error("Error logging out:", error);
-                showMessageBox(`Error logging out: ${error.message}`);
-            }
-        });
+                // Simulate sentiment data for the graph
+                const simulatedSentimentData = [
+                    Math.floor(Math.random() * 100),
+                    Math.floor(Math.random() * 100),
+                    Math.floor(Math.random() * 100)
+                ];
+                // Ensure the canvas element is present before updating the graph
+                sentimentGraphContainer.innerHTML = '<canvas id="mySentimentChart"></canvas>';
+                updateSentimentGraph(simulatedSentimentData);
+
+
+                // Perform all AI analysis and Google Search concurrently
+                const [analysisResult, searchResults, aiDetectionResult] = await Promise.all([
+                    analyzeTextWithGemini(newsInput),
+                    performGoogleSearch(newsInput.substring(0, 100)), // Use a snippet of the input for search query
+                    detectAIText(newsInput) // Call AI text detection
+                ]);
+
+                // Update Explainable AI Auditor and Propaganda Pattern Recognizer
+                const deepDiveRegex = /Deep Dive Analysis:([\s\S]*?)(?=Propaganda Patterns Detected:|$)/;
+                const propagandaRegex = /Propaganda Patterns Detected:([\s\S]*)/;
+
+                const deepDiveMatch = analysisResult.match(deepDiveRegex);
+                const propagandaMatch = analysisResult.match(propagandaRegex);
+
+                if (deepDiveMatch && deepDiveMatch[1]) {
+                    deepDiveOutput.innerHTML = `<p class="text-gray-800">${deepDiveMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
+                } else {
+                    deepDiveOutput.innerHTML = `<p class="text-gray-800">Deep Dive Analysis: ${analysisResult.replace(/\n/g, '<br>')}</p>`;
+                }
+
+                if (propagandaMatch && propagandaMatch[1]) {
+                    propagandaPatterns.innerHTML = `<p class="text-gray-800">${propagandaMatch[1].trim().replace(/\n/g, '<br>')}</p>`;
+                } else if (!deepDiveMatch) {
+                    propagandaPatterns.innerHTML = `<p class="text-gray-800">Propaganda Patterns Detected: No specific patterns identified or analysis was general.</p>`;
+                }
+
+                // Update Verified Counterpoints (Google Search)
+                if (searchResults && searchResults.length > 0) {
+                    let resultsHtml = '<p class="text-gray-800">Highly relevant and reputable news articles:</p><ul class="list-disc list-inside mt-3 text-base text-gray-600 space-y-1">';
+                    searchResults.forEach(result => {
+                        resultsHtml += `<li><a href="${result.url}" target="_blank" class="text-gray-700 hover:underline hover-effect-link font-medium">${result.title}</a></li>`;
+                    });
+                    resultsHtml += '</ul>';
+                    verifiedCounterpoints.innerHTML = resultsHtml;
+                } else {
+                    verifiedCounterpoints.innerHTML = '<p class="text-gray-800">No verified counterpoints found for this topic.</p>';
+                }
+
+                // Generate and update Counter-Narrative
+                const counterNarrativeText = await generateCounterNarrative(newsInput, analysisResult);
+                counterNarrativeOutput.innerHTML = `<p class="text-gray-800">${counterNarrativeText.replace(/\n/g, '<br>')}</p>`;
+
+                // Update Deepfake & AI-Generated Text Detector
+                deepfakeDetectionOutput.innerHTML = `<p class="text-gray-800">${aiDetectionResult.replace(/\n/g, '<br>')}</p>`;
+
+                // Save analyzed article to user's history if logged in (not anonymous)
+                if (window.authInstance.currentUser && !window.authInstance.currentUser.isAnonymous) {
+                    try {
+                        await window.addDoc(window.collection(window.db, `artifacts/${window.appId}/users/${window.currentUserId}/analyzedArticles`), {
+                            text: newsInput.substring(0, 500), // Save a snippet or full text
+                            analysisSummary: analysisResult.substring(0, 200), // Save a summary
+                            timestamp: window.serverTimestamp()
+                        });
+                        console.log("Analyzed article saved to user history.");
+                    } catch (error) {
+                        console.error("Error saving analyzed article to user history:", error);
+                    }
+                }
+
+
+                // Reset button state
+                analyzeBtn.innerHTML = 'Check News';
+                analyzeBtn.disabled = false;
+            });
+
+            document.getElementById('addEvidenceBtn').addEventListener('click', async function() {
+                const evidenceLink = document.getElementById('evidenceLinkInput').value.trim();
+                const evidenceComment = document.getElementById('evidenceCommentInput').value.trim();
+
+                if (!evidenceLink || !evidenceComment) {
+                    showMessageBox('Please provide both a link and a comment for your evidence.');
+                    return;
+                }
+
+                // Access Firebase instances from the global window object
+                const db = window.db;
+                const addDoc = window.addDoc;
+                const collection = window.collection;
+                const serverTimestamp = window.serverTimestamp;
+                const appId = window.appId;
+                const currentUserId = window.currentUserId;
+                const doc = window.doc;
+                const updateDoc = window.updateDoc;
+                const getDoc = window.getDoc;
+                const setDoc = window.setDoc;
+
+                // IMPORTANT: Only allow authenticated (non-anonymous) users to submit evidence
+                if (!window.authInstance.currentUser || window.authInstance.currentUser.isAnonymous) {
+                    showMessageBox('Please sign up or log in with an email account to submit evidence.');
+                    return;
+                }
+
+
+                if (!db || !addDoc || !collection || !serverTimestamp || !appId || !currentUserId || !doc || !updateDoc || !getDoc || !setDoc) {
+                    console.error("Firebase services not fully initialized or user not authenticated.");
+                    showMessageBox("Error: Firebase services not ready. Please try again.");
+                    return;
+                }
+
+                try {
+                    // Add contribution to public collection
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/communityContributions`), {
+                        link: evidenceLink,
+                        comment: evidenceComment,
+                        userId: currentUserId,
+                        timestamp: serverTimestamp(),
+                        points: 10 // Award 10 points for each contribution
+                    });
+
+                    // Update user's points
+                    const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/data`);
+                    const userDocSnap = await getDoc(userDocRef);
+                    let currentPoints = 0;
+                    if (userDocSnap.exists()) {
+                        currentPoints = userDocSnap.data().points || 0;
+                        await updateDoc(userDocRef, { points: currentPoints + 10 });
+                    } else {
+                        // This case should ideally not happen if onAuthStateChanged works, but as a fallback
+                        await setDoc(userDocRef, { points: 10, createdAt: serverTimestamp() });
+                    }
+                    window.userPoints = currentPoints + 10; // Update global points
+                    document.getElementById('currentUserPointsDisplay').textContent = `Your Points: ${window.userPoints}`;
+
+
+                    showMessageBox('Evidence submitted successfully! You earned 10 points.');
+                    document.getElementById('evidenceLinkInput').value = '';
+                    document.getElementById('evidenceCommentInput').value = '';
+                } catch (error) {
+                    console.error("Error submitting evidence or updating points:", error);
+                    showMessageBox("Error submitting evidence. Please try again.");
+                }
+            });
+
+
+            document.getElementById('sendChatBtn').addEventListener('click', async function() {
+                const chatInput = document.getElementById('chatInput');
+                const chatWindow = document.getElementById('chatWindow');
+                const userMessage = chatInput.value.trim();
+
+                if (userMessage === '') {
+                    return;
+                }
+
+                // Add user message to chat window
+                const userDiv = document.createElement('div');
+                userDiv.className = 'text-right mb-3';
+                userDiv.innerHTML = `<span class="font-semibold text-gray-700">You:</span> ${userMessage}`;
+                chatWindow.appendChild(userDiv);
+
+                // Show loading for bot response
+                const botDiv = document.createElement('div');
+                botDiv.className = 'text-left mb-3';
+                botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> <span class="spinner"></span> Thinking...`;
+                chatWindow.appendChild(botDiv);
+
+                chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom
+
+                chatInput.value = ''; // Clear input
+
+                // Simulate bot response with Gemini API call for fact-checking
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: `Act as a helpful and concise fact-checking bot. Provide an instant assessment in natural language for the following query or text. If relevant, proactively ask if the user wants to see how reputable news sources are covering this, and if so, suggest a Google Search link.
+                
+                User query/text: "${userMessage}"` }] });
+
+                const payload = { contents: chatHistory };
+                // Use the API key from firebaseConfig
+                const apiKey = firebaseConfig.apiKey; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        console.error('Gemini API HTTP Error (Chat Bot):', response.status, errorBody);
+                        botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Fact-check service failed with status ${response.status}.`;
+                        return;
+                    }
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const botResponseText = result.candidates[0].content.parts[0].text;
+                        // Replace the loading spinner with the actual response
+                        botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> ${botResponseText.replace(/\n/g, '<br>')}`;
+                    } else {
+                        botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Could not get a response from the fact-check bot.`;
+                        console.error('Gemini API response structure unexpected for chat bot:', result);
+                    }
+                } catch (error) {
+                    botDiv.innerHTML = `<span class="font-semibold text-gray-700">Bot:</span> Error: Failed to connect to the fact-check bot service.`;
+                    console.error('Error calling Gemini API for chat bot:', error);
+                } finally {
+                    chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to bottom again
+                }
+            });
+
+            // Allow pressing Enter to send chat message
+            document.getElementById('chatInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('sendChatBtn').click();
+                }
+            });
+
+            // Logout button event listener
+            document.getElementById('logoutButton').addEventListener('click', async () => {
+                try {
+                    await signOut(auth); // Use the directly accessible signOut and auth
+                    // Redirect to auth.html after successful logout
+                    window.location.href = 'auth.html';
+                } catch (error) {
+                    console.error("Error logging out:", error);
+                    showMessageBox(`Error logging out: ${error.message}`);
+                }
+            });
+        }); // End of DOMContentLoaded
     </script>
+    <style>
+        /* Custom styles for Inter font for body and Playfair Display for headings */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5dc; /* Cream/Beige for newspaper paper */
+            color: #36454F; /* Charcoal for main text */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        h1, h2 {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Ensure all elements have rounded corners - slightly less pronounced for newspaper feel */
+        * {
+            border-radius: 0.5rem;
+        }
+        /* Specific styling for card-like sections */
+        .card {
+            background-color: #ffffff; /* Clean white for content blocks */
+            padding: 2rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Softer shadow */
+            margin-bottom: 2rem;
+            border: 1px solid #d3d3d3; /* Light gray border for definition */
+        }
+        /* Style for interactive elements like buttons */
+        .btn {
+            padding: 0.85rem 1.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease; /* Faster, snappier transitions */
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+            border-radius: 0.375rem; /* Slightly less rounded for a classic feel */
+        }
+        .btn-primary {
+            background-color: #4a4a4a; /* Dark gray */
+            color: white;
+            box-shadow: none; /* No shadow for a flatter, newspaper print look */
+            border: 1px solid #333;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .btn-primary:hover {
+            background-color: #333; /* Darker gray on hover */
+            transform: none; /* No lift effect */
+        }
+        .btn-secondary {
+            background-color: #e0e0e0; /* Light gray */
+            color: #4a4a4a; /* Dark gray text */
+            border: 1px solid #b0b0b0; /* Muted border */
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #c0c0c0; /* Darker light gray on hover */
+            color: #333;
+            transform: none; /* No lift effect */
+        }
+        /* Textarea styling */
+        textarea {
+            resize: vertical;
+            min-height: 180px;
+            border: 1px solid #b0b0b0; /* Muted border */
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+        }
+        textarea:focus {
+            border-color: #888;
+            box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2); /* Soft gray glow */
+        }
+        /* Input styling */
+        input[type="text"], input[type="file"] {
+            border: 1px solid #b0b0b0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+        }
+        input[type="text"]:focus, input[type="file"]:focus {
+            border-color: #888;
+            box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2);
+        }
+
+        /* Progress bar styling */
+        .progress-bar-container {
+            background-color: #e0e0e0; /* Light gray background for the bar */
+            height: 0.85rem;
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.3); /* Slightly softer text shadow */
+        }
+        /* Solid colors for progress bars based on score */
+        .score-low { background-color: #d32f2f; } /* Red */
+        .score-medium { background-color: #fbc02d; } /* Yellow */
+        .score-high { background-color: #388e3c; } /* Green */
+        .score-community { background-color: #1976d2; } /* Blue for community */
+
+        /* Chat window styling */
+        #chatWindow {
+            background-color: #fdfdfd; /* Off-white for chat */
+            border: 1px solid #d3d3d3;
+            height: 200px;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        #chatWindow > div {
+            margin-bottom: 0.75rem;
+        }
+        #chatInput {
+            border: 1px solid #b0b0b0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+        }
+        #chatInput:focus {
+            border-color: #888;
+            box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2);
+        }
+        /* Message box styling */
+        .message-box {
+            background-color: rgba(0, 0, 0, 0.7); /* Darker overlay */
+        }
+        .message-box-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Footer styling */
+        footer {
+            background-color: #36454F; /* Charcoal for footer */
+            color: #d3d3d3; /* Light gray text */
+            padding: 2.5rem 2rem;
+            text-align: center;
+            margin-top: 4rem;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        footer a {
+            color: #a9a9a9; /* Muted gray links */
+            transition: color 0.2s ease;
+        }
+        footer a:hover {
+            color: #c0c0c0;
+        }
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Text hover animations */
+        .hover-effect-text:hover {
+            color: #1976d2; /* A subtle blue on hover */
+            transform: translateY(-2px); /* Slight lift */
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+        .hover-effect-link:hover {
+            color: #3182ce; /* A more pronounced blue for links */
+            text-decoration: underline;
+            transition: color 0.2s ease, text-decoration 0.2s ease;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-10">
+    <div class="max-w-7xl mx-auto flex-grow">
+        <!-- Header Section -->
+        <header class="text-center mb-10 relative">
+            <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-3 leading-tight">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-gray-700 to-gray-900">
+                    The Daily Truth
+                </span>
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Uncovering the facts, one story at a time. Your trusted source for clarity in a complex world.
+            </p>
+            <!-- Authentication Status, My Profile Link, Personalized News Link, and Logout Button -->
+            <div class="absolute top-0 right-0 text-right text-sm text-gray-700 flex flex-col items-end">
+                <p id="authStatusDisplay" class="font-semibold"></p>
+                <a href="profile.html" id="myProfileLink" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">My Profile</a>
+                <a href="personalized-news.html" id="personalizedNewsLink" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">Personalized News</a>
+                <button id="logoutButton" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">Log Out</button>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Input and Core Detection -->
+            <div class="lg:col-span-2">
+                <!-- Input Area -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Analyze News Article</h2>
+                    <textarea id="newsInput" class="w-full p-4 border focus:outline-none focus:ring-0" placeholder="Paste the news article text or link here for analysis..."></textarea>
+                    <button id="analyzeBtn" class="btn btn-primary mt-6 w-full md:w-auto">
+                        Check News
+                    </button>
+                </section>
+
+                <!-- Explainable AI Auditor -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">The "Explainable AI" Auditor</h2>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Confidence Score:</p>
+                        <div id="confidenceScore" class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: 0%;">
+                                N/A
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Deep Dive Deconstruction:</p>
+                        <div id="deepDiveOutput" class="bg-gray-50 p-4 text-gray-700 leading-relaxed border">
+                            <!-- Placeholder for visual deconstruction (sentiment, NER, coreference) -->
+                            <p class="text-gray-500">Analysis results will appear here after you click "Check News".</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Propaganda Pattern Recognizer -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">The "Propaganda Pattern Recognizer"</h2>
+                    <div id="propagandaPatterns" class="bg-gray-50 p-4 text-gray-700 border">
+                        <!-- Placeholder for detected propaganda techniques -->
+                        <p class="text-gray-500">Identified propaganda techniques will be listed here.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Contextual Verification & Engagement -->
+            <div class="lg:col-span-1">
+                <!-- Source & Sentiment Navigator -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Source & Sentiment Navigator</h2>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Overall Trust Score:</p>
+                        <div id="trustScore" class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: 0%;">
+                                N/A
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Sentiment Change Over Time:</p>
+                        <div id="sentimentGraph" class="bg-gray-50 p-4 h-40 flex items-center justify-center text-gray-500 border">
+                            <!-- Canvas for Chart.js graph -->
+                            <canvas id="mySentimentChart"></canvas>
+                            <p class="text-gray-500 hidden">Sentiment analysis graph will be displayed here.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xl font-semibold text-gray-700 mb-3">Verified Counterpoints (Google Search):</p>
+                        <div id="verifiedCounterpoints" class="bg-gray-50 p-4 text-gray-700 border">
+                            <!-- Placeholder for Google Search results -->
+                            <p class="text-gray-500">Reputable news articles will appear here.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Counter-Narrative Generator -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">The "Counter-Narrative Generator"</h2>
+                    <div id="counterNarrative" class="bg-gray-50 p-4 text-gray-700 leading-relaxed border">
+                        <!-- Placeholder for generated counter-narratives -->
+                        <p class="text-gray-500">Evidence-based alternative viewpoints will be presented here.</p>
+                    </div>
+                </section>
+
+                <!-- Deepfake & AI-Generated Text Detector -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Deepfake & AI-Generated Text Detector</h2>
+                    <input type="file" id="mediaUpload" class="w-full p-3 border mb-4 focus:outline-none focus:ring-0 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
+                    <div id="deepfakeDetection" class="bg-gray-50 p-4 text-gray-700 border">
+                        <!-- Placeholder for detection results -->
+                        <p class="text-gray-500">Media analysis results will appear here.</p>
+                    </div>
+                </section>
+
+                <!-- Interactive Fact-Check Bot -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Interactive Fact-Check Bot</h2>
+                    <div id="chatWindow" class="bg-gray-50 p-4 h-56 overflow-y-auto mb-4 text-gray-700 border">
+                        <!-- Chat messages will appear here -->
+                        <div class="mb-3"><span class="font-semibold text-gray-700">Bot:</span> Hello! Paste a link or text, or ask me a question to fact-check.</div>
+                    </div>
+                    <input type="text" id="chatInput" class="w-full p-3 border focus:outline-none focus:ring-0" placeholder="Type your question or paste a link...">
+                    <button id="sendChatBtn" class="btn btn-primary mt-4 w-full">Send</button>
+                </section>
+
+                <!-- Community-Driven & Gamified Verification Network -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Community-Driven Verification Network</h2>
+                    <div class="mb-4 text-sm text-gray-600">
+                        <p id="currentUserIdDisplay">Your User ID: Loading...</p>
+                        <p id="currentUserPointsDisplay">Your Points: 0</p>
+                    </div>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Community Consensus:</p>
+                        <div id="communityConsensus" class="progress-bar-container">
+                            <div class="progress-bar-fill score-community" style="width: 0%;">
+                                N/A
+                            </div>
+                        </div>
+                    </div>
+                    <div id="communityContributions" class="bg-gray-50 p-4 text-gray-700 border mb-6">
+                        <!-- Community contributions will be loaded here -->
+                        <p class="text-gray-500">Community contributions and evidence will be displayed here.</p>
+                    </div>
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Top Contributors (Leaderboard):</p>
+                        <div id="leaderboardList" class="bg-gray-50 p-4 text-gray-700 border">
+                            <p class="text-gray-500">Loading leaderboard...</p>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-3 hover-effect-text">Add Your Evidence:</h3>
+                        <input type="text" id="evidenceLinkInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Paste link to verified evidence (e.g., reputable news, official report)">
+                        <textarea id="evidenceCommentInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Add a brief comment about this evidence..."></textarea>
+                        <button id="addEvidenceBtn" class="btn btn-secondary w-full" disabled>Submit Evidence</button>
+                        <p id="anonymousContributionMessage" class="text-sm text-red-500 mt-2 hidden">Please sign up or log in to submit evidence.</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p class="text-sm">&copy; 2025 The Daily Truth. All rights reserved.</p>
+        <p class="text-sm mt-2">
+            <a href="#" class="hover:underline hover-effect-link">Privacy Policy</a> |
+            <a href="#" class="ml-2 hover:underline hover-effect-link">Terms of Service</a>
+        </p>
+    </footer>
 </body>
 </html>
