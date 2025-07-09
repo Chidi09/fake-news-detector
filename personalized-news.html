@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personalized News - The Daily Truth</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5dc; /* Cream/Beige for newspaper paper */
+            color: #36454F; /* Charcoal for main text */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        h1, h2 {
+            font-family: 'Playfair Display', serif;
+        }
+        .card {
+            background-color: #ffffff;
+            padding: 2rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #d3d3d3;
+        }
+        .btn {
+            padding: 0.85rem 1.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+            border-radius: 0.375rem;
+        }
+        .btn-primary {
+            background-color: #4a4a4a;
+            color: white;
+            box-shadow: none;
+            border: 1px solid #333;
+        }
+        .btn-primary:hover {
+            background-color: #333;
+            transform: none;
+        }
+        /* Message box styling */
+        .message-box {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .message-box-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hover-effect-link:hover {
+            color: #3182ce;
+            text-decoration: underline;
+            transition: color 0.2s ease, text-decoration 0.2s ease;
+        }
+        .news-article {
+            background-color: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .news-article h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #36454F;
+            margin-bottom: 0.75rem;
+        }
+        .news-article p {
+            font-size: 1rem;
+            color: #4a4a4a;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .news-article a {
+            color: #1976d2;
+            font-weight: 600;
+        }
+        .news-article a:hover {
+            text-decoration: underline;
+        }
+        .news-category {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #4a4a4a;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #d3d3d3;
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-10">
+    <div class="max-w-7xl mx-auto flex-grow">
+        <header class="text-center mb-10 relative">
+            <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-3 leading-tight">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-gray-700 to-gray-900">
+                    Personalized News
+                </span>
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                News tailored just for you, verified by The Daily Truth.
+            </p>
+            <div class="absolute top-0 right-0">
+                <a href="app.html" class="btn btn-primary text-sm py-1 px-3">Back to App</a>
+            </div>
+        </header>
+
+        <main>
+            <section class="card">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">Your Personalized Feed</h2>
+                <div id="personalizedNewsFeed" class="min-h-[200px] flex items-center justify-center">
+                    <p class="text-gray-500">Loading your personalized news...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p class="text-sm">&copy; 2025 The Daily Truth. All rights reserved.</p>
+        <p class="text-sm mt-2">
+            <a href="#" class="hover:underline hover-effect-link">Privacy Policy</a> |
+            <a href="#" class="ml-2 hover:underline hover-effect-link">Terms of Service</a>
+        </p>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration (MUST BE THE SAME AS other HTML files)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzxIOsaM2smH6Xx5XTyP8PMHZF1SloV8k",
+            authDomain: "fakenewsdetector-a29bd.firebaseapp.com",
+            projectId: "fakenewsdetector-a29bd",
+            storageBucket: "fakenewsdetector-a29bd.firebasestorage.app",
+            messagingSenderId: "547697866883",
+            appId: "1:547697866883:web:307b464c8d8b0e40acc3b6",
+            measurementId: "G-F05HJ0B35J"
+        };
+        const appId = firebaseConfig.appId;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const personalizedNewsFeed = document.getElementById('personalizedNewsFeed');
+
+        // Function to display a custom message box (for consistency)
+        function showMessageBox(message) {
+            const messageBox = document.createElement('div');
+            messageBox.className = 'fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 message-box';
+            messageBox.innerHTML = `
+                <div class="bg-white p-8 rounded-xl shadow-2xl text-center message-box-content">
+                    <p class="text-2xl font-bold text-gray-800 mb-6">${message}</p>
+                    <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Got It!</button>
+                </div>
+            `;
+            document.body.appendChild(messageBox);
+        }
+
+        // Function to extract keywords/topics from analyzed articles using Gemini API
+        async function extractKeywordsFromArticles(articles) {
+            if (!articles || articles.length === 0) {
+                return [];
+            }
+
+            const combinedText = articles.map(a => a.text).join('\n\n');
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: `Extract the top 5-10 most prominent keywords or topics from the following combined news article texts. Focus on general subjects rather than specific events or names, suitable for personalizing a news feed. Return them as a comma-separated list.
+
+            Example: "politics, technology, environment, health, sports"
+
+            Combined News Text:
+            "${combinedText}"` }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error('Gemini API HTTP Error (Keywords):', response.status, errorBody);
+                    return [];
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const keywordsString = result.candidates[0].content.parts[0].text;
+                    return keywordsString.split(',').map(kw => kw.trim()).filter(kw => kw.length > 0);
+                } else {
+                    console.error('Gemini API response structure unexpected (Keywords):', result);
+                    return [];
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API (Keywords):', error);
+                return [];
+            }
+        }
+
+        // Function to simulate fetching personalized news based on topics
+        async function fetchPersonalizedNews(topics) {
+            personalizedNewsFeed.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Generating personalized news...</p>';
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+
+            if (topics.length === 0) {
+                return { "General News": [
+                    { title: "Global Markets Update", snippet: "Stock markets show mixed reactions to recent economic data.", url: "https://example.com/global-markets" },
+                    { title: "Latest in Space Exploration", snippet: "New discoveries from the James Webb Space Telescope.", url: "https://example.com/space-exploration" }
+                ]};
+            }
+
+            const personalizedArticles = {};
+            const availableTopics = ["Politics", "Technology", "Environment", "Health", "Sports", "Economy", "Science", "Culture"];
+
+            topics.forEach(topic => {
+                const capitalizedTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
+                if (availableTopics.includes(capitalizedTopic)) {
+                    personalizedArticles[capitalizedTopic] = [
+                        { title: `Breakthrough in ${capitalizedTopic} Research`, snippet: `Scientists announce a major discovery in the field of ${topic}.`, url: `https://example.com/${topic}-breakthrough` },
+                        { title: `Analysis: The Future of ${capitalizedTopic}`, snippet: `Experts weigh in on upcoming trends and challenges in ${topic}.`, url: `https://example.com/${topic}-future` }
+                    ];
+                } else {
+                     // Fallback for topics not directly matched
+                     if (!personalizedArticles["General News"]) {
+                         personalizedArticles["General News"] = [];
+                     }
+                     personalizedArticles["General News"].push(
+                         { title: `News related to ${capitalizedTopic}`, snippet: `An interesting development concerning ${topic}.`, url: `https://example.com/${topic}-general` }
+                     );
+                }
+            });
+
+            // Ensure there's always some content, even if topics are niche
+            if (Object.keys(personalizedArticles).length === 0) {
+                personalizedArticles["General News"] = [
+                    { title: "Top Headlines Today", snippet: "A summary of the day's most important news.", url: "https://example.com/top-headlines" }
+                ];
+            }
+
+
+            return personalizedArticles;
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user && !user.isAnonymous) {
+                // User is signed in with email.
+                const userId = user.uid;
+                personalizedNewsFeed.innerHTML = '<p class="text-gray-500"><span class="spinner"></span> Fetching your analyzed articles...</p>';
+
+                try {
+                    // Fetch analyzed articles for the current user
+                    const analyzedArticlesColRef = collection(db, `artifacts/${appId}/users/${userId}/analyzedArticles`);
+                    const q = query(analyzedArticlesColRef, orderBy('timestamp', 'desc'));
+                    const querySnapshot = await getDocs(q);
+
+                    const analyzedArticles = [];
+                    querySnapshot.forEach((doc) => {
+                        analyzedArticles.push(doc.data());
+                    });
+
+                    if (analyzedArticles.length === 0) {
+                        personalizedNewsFeed.innerHTML = `
+                            <p class="text-gray-700 text-center">It looks like you haven't analyzed any articles yet.
+                            <br>Head back to the <a href="app.html" class="text-blue-600 hover:underline hover-effect-link">main app</a> to start analyzing news and build your personalized feed!</p>
+                        `;
+                        return;
+                    }
+
+                    // Extract keywords/topics from analyzed articles
+                    const topics = await extractKeywordsFromArticles(analyzedArticles);
+                    console.log("Inferred Topics:", topics);
+
+                    // Fetch and display personalized news based on topics
+                    const newsByTopic = await fetchPersonalizedNews(topics);
+
+                    let newsHtml = '';
+                    if (Object.keys(newsByTopic).length === 0) {
+                        newsHtml = '<p class="text-gray-500">Could not generate personalized news. Try analyzing more articles!</p>';
+                    } else {
+                        for (const category in newsByTopic) {
+                            newsHtml += `<h3 class="news-category">${category}</h3>`;
+                            newsByTopic[category].forEach(article => {
+                                newsHtml += `
+                                    <div class="news-article">
+                                        <h3>${article.title}</h3>
+                                        <p>${article.snippet}</p>
+                                        <a href="${article.url}" target="_blank">Read More &rarr;</a>
+                                    </div>
+                                `;
+                            });
+                        }
+                    }
+                    personalizedNewsFeed.innerHTML = newsHtml;
+
+                } catch (error) {
+                    console.error("Error fetching personalized news:", error);
+                    personalizedNewsFeed.innerHTML = '<p class="text-red-500">Error loading personalized news. Please try again later.</p>';
+                    showMessageBox("Error loading personalized news. Please check console for details.");
+                }
+
+            } else {
+                // User is not signed in or is anonymous. Redirect to auth.html.
+                console.log("User not authenticated or is anonymous on personalized-news.html. Redirecting to auth.html");
+                if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
+                    window.location.href = 'auth.html';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
