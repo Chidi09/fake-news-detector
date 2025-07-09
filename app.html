@@ -693,7 +693,8 @@
             "${text}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = ""; // Set apiKey to empty string for Canvas environment
+            // Use the API key from firebaseConfig
+            const apiKey = firebaseConfig.apiKey; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -741,7 +742,8 @@
             Counter-Narrative:` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = ""; // Set apiKey to empty string for Canvas environment
+            // Use the API key from firebaseConfig
+            const apiKey = firebaseConfig.apiKey; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -788,7 +790,8 @@
             "${text}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = ""; // Set apiKey to empty string for Canvas environment
+            // Use the API key from firebaseConfig
+            const apiKey = firebaseConfig.apiKey; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -1069,7 +1072,8 @@
             User query/text: "${userMessage}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = ""; // Set apiKey to empty string for Canvas environment
+            // Use the API key from firebaseConfig
+            const apiKey = firebaseConfig.apiKey; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
