@@ -9,6 +9,176 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN for Sentiment Graph -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDKs for Firestore and Auth -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzxIOsaM2smH6Xx5XTyP8PMHZF1SloV8k",
+            authDomain: "fakenewsdetector-a29bd.firebaseapp.com",
+            projectId: "fakenewsdetector-a29bd",
+            storageBucket: "fakenewsdetector-a29bd.firebasestorage.app",
+            messagingSenderId: "547697866883",
+            appId: "1:547697866883:web:307b464c8d8b0e40acc3b6",
+            measurementId: "G-F05HJ0B35J"
+        };
+        const appId = firebaseConfig.appId; // Use the appId from your config
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId = 'anonymous'; // Default to anonymous
+        let userPoints = 0; // Initialize user points
+
+        // Authenticate user
+        onAuthStateChanged(auth, async (user) => {
+            const addEvidenceBtn = document.getElementById('addEvidenceBtn');
+            if (user) {
+                userId = user.uid;
+                console.log("Authenticated with Firebase. User ID:", userId);
+                document.getElementById('currentUserIdDisplay').textContent = `Your User ID: ${userId.substring(0, 8)}...`;
+                
+                // Fetch user points
+                const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/data`);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    userPoints = userDocSnap.data().points || 0;
+                } else {
+                    // Create user profile if it doesn't exist
+                    await setDoc(userDocRef, { points: 0, createdAt: serverTimestamp() });
+                }
+                document.getElementById('currentUserPointsDisplay').textContent = `Your Points: ${userPoints}`;
+                if (addEvidenceBtn) {
+                    addEvidenceBtn.disabled = false; // Enable button after successful authentication
+                }
+
+            } else {
+                try {
+                    // Sign in anonymously if no user or custom token is provided
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Error during Firebase authentication:", error);
+                    document.getElementById('currentUserIdDisplay').textContent = "Authentication Error";
+                    if (addEvidenceBtn) {
+                        addEvidenceBtn.disabled = true; // Keep button disabled on error
+                    }
+                }
+            }
+            // Make userId and userPoints globally available after authentication
+            window.currentUserId = userId;
+            window.userPoints = userPoints;
+            // Initialize Firestore listener after authentication
+            setupCommunityContributionsListener(db, appId);
+            setupLeaderboardListener(db, appId); // Setup leaderboard listener
+        });
+
+        // Function to set up real-time listener for community contributions
+        function setupCommunityContributionsListener(dbInstance, currentAppId) {
+            const contributionsColRef = collection(dbInstance, `artifacts/${currentAppId}/public/data/communityContributions`);
+            const q = query(contributionsColRef, orderBy('timestamp', 'desc')); // Order by timestamp
+
+            onSnapshot(q, (snapshot) => {
+                const contributionsList = document.getElementById('communityContributions');
+                contributionsList.innerHTML = ''; // Clear previous contributions
+
+                if (snapshot.empty) {
+                    contributionsList.innerHTML = '<p class="text-gray-500">No community contributions yet. Be the first to add evidence!</p>';
+                    return;
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'list-disc list-inside mt-3 text-base text-gray-600 space-y-2';
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const li = document.createElement('li');
+                    li.className = 'border-b border-gray-200 pb-2';
+                    const timestamp = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A';
+                    const contributorId = data.userId ? data.userId.substring(0, 8) + '...' : 'Anonymous'; // Truncate for display
+
+                    li.innerHTML = `
+                        <p class="font-semibold text-gray-800">${data.comment}</p>
+                        <a href="${data.link}" target="_blank" class="text-blue-600 hover:underline text-sm">${data.link}</a>
+                        <p class="text-xs text-gray-500 mt-1">Contributed by: ${contributorId} (Points: ${data.points || 0}) on ${timestamp} 
+                        <button class="text-red-500 hover:text-red-700 text-xs ml-2" onclick="showMessageBox('Report functionality is conceptual. In a real app, this would flag the contribution for review.')">Report</button></p>
+                    `;
+                    ul.appendChild(li);
+                });
+                contributionsList.appendChild(ul);
+            }, (error) => {
+                console.error("Error fetching community contributions:", error);
+                document.getElementById('communityContributions').innerHTML = '<p class="text-red-500">Error loading community contributions.</p>';
+            });
+        }
+
+        // Function to set up real-time listener for leaderboard
+        function setupLeaderboardListener(dbInstance, currentAppId) {
+            const usersColRef = collection(dbInstance, `artifacts/${currentAppId}/users`);
+            const q = query(usersColRef); // No orderBy here, will sort in memory
+
+            onSnapshot(q, async (snapshot) => {
+                const leaderboardList = document.getElementById('leaderboardList');
+                leaderboardList.innerHTML = ''; // Clear previous leaderboard
+
+                let usersData = [];
+                for (const userDoc of snapshot.docs) {
+                    const profileDocRef = doc(dbInstance, `artifacts/${currentAppId}/users/${userDoc.id}/profile/data`);
+                    const profileDocSnap = await getDoc(profileDocRef);
+                    if (profileDocSnap.exists()) {
+                        usersData.push({
+                            userId: userDoc.id,
+                            points: profileDocSnap.data().points || 0
+                        });
+                    }
+                }
+
+                // Sort users by points in descending order
+                usersData.sort((a, b) => b.points - a.points);
+
+                if (usersData.length === 0) {
+                    leaderboardList.innerHTML = '<p class="text-gray-500">No users on the leaderboard yet.</p>';
+                    return;
+                }
+
+                const ol = document.createElement('ol');
+                ol.className = 'list-decimal list-inside mt-3 text-base text-gray-600 space-y-1';
+
+                usersData.slice(0, 10).forEach((user, index) => { // Show top 10
+                    const li = document.createElement('li');
+                    const displayId = user.userId === window.currentUserId ? `You (${user.userId.substring(0, 8)}...)` : `${user.userId.substring(0, 8)}...`;
+                    li.innerHTML = `<span class="font-semibold text-gray-800">${displayId}</span>: ${user.points} points`;
+                    ol.appendChild(li);
+                });
+                leaderboardList.appendChild(ol);
+            }, (error) => {
+                console.error("Error fetching leaderboard:", error);
+                document.getElementById('leaderboardList').innerHTML = '<p class="text-red-500">Error loading leaderboard.</p>';
+            });
+        }
+
+
+        // Expose Firebase and other instances to the global window object for use in other scripts
+        window.db = db;
+        window.auth = auth;
+        window.addDoc = addDoc;
+        window.collection = collection;
+        window.serverTimestamp = serverTimestamp;
+        window.appId = appId;
+        window.doc = doc; // Expose doc for user profile updates
+        window.getDoc = getDoc; // Expose getDoc for user profile updates
+        window.setDoc = setDoc; // Expose setDoc for user profile creation
+        window.updateDoc = updateDoc; // Expose updateDoc for user points
+    </script>
     <style>
         /* Custom styles for Inter font for body and Playfair Display for headings */
         body {
@@ -72,7 +242,7 @@
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         textarea:focus {
-            border-color: #888; /* Muted gray border on focus */
+            border-color: #888;
             box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2); /* Soft gray glow */
         }
         /* Progress bar styling */
@@ -285,6 +455,10 @@
                 <!-- Community-Driven & Gamified Verification Network -->
                 <section class="card">
                     <h2 class="text-3xl font-bold text-gray-800 mb-6">Community-Driven Verification Network</h2>
+                    <div class="mb-4 text-sm text-gray-600">
+                        <p id="currentUserIdDisplay">Your User ID: Loading...</p>
+                        <p id="currentUserPointsDisplay">Your Points: 0</p>
+                    </div>
                     <div class="mb-5">
                         <p class="text-xl font-semibold text-gray-700 mb-2">Community Consensus:</p>
                         <div id="communityConsensus" class="progress-bar-container">
@@ -293,9 +467,21 @@
                             </div>
                         </div>
                     </div>
-                    <div id="communityContributions" class="bg-gray-50 p-4 text-gray-700 border">
-                        <!-- Placeholder for community evidence and gamification -->
+                    <div class="mb-5">
+                        <p class="text-xl font-semibold text-gray-700 mb-2">Top Contributors (Leaderboard):</p>
+                        <div id="leaderboardList" class="bg-gray-50 p-4 text-gray-700 border">
+                            <p class="text-gray-500">Loading leaderboard...</p>
+                        </div>
+                    </div>
+                    <div id="communityContributions" class="bg-gray-50 p-4 text-gray-700 border mb-6">
+                        <!-- Community contributions will be loaded here -->
                         <p class="text-gray-500">Community contributions and evidence will be displayed here.</p>
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-3">Add Your Evidence:</h3>
+                        <input type="text" id="evidenceLinkInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Paste link to verified evidence (e.g., reputable news, official report)">
+                        <textarea id="evidenceCommentInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Add a brief comment about this evidence..."></textarea>
+                        <button id="addEvidenceBtn" class="btn btn-secondary w-full" disabled>Submit Evidence</button>
                     </div>
                 </section>
             </div>
@@ -502,10 +688,17 @@
             }
         }
 
-        // Function to call Gemini API for AI-Generated Text Detection
+        // Function to call Gemini API for AI-Generated Text Detection (Enhanced Output)
         async function detectAIText(text) {
             let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: `Analyze the following text for patterns indicative of AI generation (e.g., unusual phrasing, lack of nuanced opinion, repetitive structures, overly formal or generic language). Provide a concise assessment. If it appears AI-generated, state "Potential AI-Generated Text Detected." If not, state "Text appears human-written." If unsure, state "Assessment inconclusive."
+            chatHistory.push({ role: "user", parts: [{ text: `Analyze the following text for patterns indicative of AI generation. Provide a concise assessment, including a confidence level (e.g., "Low", "Medium", "High") and a brief reason for your assessment (e.g., "Repetitive phrasing", "Overly generic language", "Lacks human-like nuance").
+            
+            Format your response as:
+            Assessment: [Your assessment, e.g., "Potential AI-Generated Text Detected."]
+            Confidence: [Confidence level, e.g., "High"]
+            Reason: [Brief reason, e.g., "Repetitive sentence structures and formal tone."]
+            
+            If it appears human-written, state "Text appears human-written." and "Confidence: High" and "Reason: Natural language flow and varied expression."
             
             Text for analysis:
             "${text}"` }] });
@@ -676,6 +869,68 @@
             analyzeBtn.innerHTML = 'Check News';
             analyzeBtn.disabled = false;
         });
+
+        document.getElementById('addEvidenceBtn').addEventListener('click', async function() {
+            const evidenceLink = document.getElementById('evidenceLinkInput').value.trim();
+            const evidenceComment = document.getElementById('evidenceCommentInput').value.trim();
+
+            if (!evidenceLink || !evidenceComment) {
+                showMessageBox('Please provide both a link and a comment for your evidence.');
+                return;
+            }
+
+            // Access Firebase instances from the global window object
+            const db = window.db;
+            const addDoc = window.addDoc;
+            const collection = window.collection;
+            const serverTimestamp = window.serverTimestamp;
+            const appId = window.appId;
+            const currentUserId = window.currentUserId;
+            const doc = window.doc;
+            const updateDoc = window.updateDoc;
+            const getDoc = window.getDoc;
+            const setDoc = window.setDoc;
+
+            if (!db || !addDoc || !collection || !serverTimestamp || !appId || !currentUserId || !doc || !updateDoc || !getDoc || !setDoc) {
+                console.error("Firebase services not fully initialized or user not authenticated.");
+                showMessageBox("Error: Firebase services not ready. Please try again.");
+                return;
+            }
+
+            try {
+                // Add contribution to public collection
+                await addDoc(collection(db, `artifacts/${appId}/public/data/communityContributions`), {
+                    link: evidenceLink,
+                    comment: evidenceComment,
+                    userId: currentUserId,
+                    timestamp: serverTimestamp(),
+                    points: 10 // Award 10 points for each contribution
+                });
+
+                // Update user's points
+                const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/data`);
+                const userDocSnap = await getDoc(userDocRef);
+                let currentPoints = 0;
+                if (userDocSnap.exists()) {
+                    currentPoints = userDocSnap.data().points || 0;
+                    await updateDoc(userDocRef, { points: currentPoints + 10 });
+                } else {
+                    // This case should ideally not happen if onAuthStateChanged works, but as a fallback
+                    await setDoc(userDocRef, { points: 10, createdAt: serverTimestamp() });
+                }
+                window.userPoints = currentPoints + 10; // Update global points
+                document.getElementById('currentUserPointsDisplay').textContent = `Your Points: ${window.userPoints}`;
+
+
+                showMessageBox('Evidence submitted successfully! You earned 10 points.');
+                document.getElementById('evidenceLinkInput').value = '';
+                document.getElementById('evidenceCommentInput').value = '';
+            } catch (error) {
+                console.error("Error submitting evidence or updating points:", error);
+                showMessageBox("Error submitting evidence. Please try again.");
+            }
+        });
+
 
         document.getElementById('sendChatBtn').addEventListener('click', async function() {
             const chatInput = document.getElementById('chatInput');
