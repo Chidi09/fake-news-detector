@@ -13,7 +13,15 @@
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword, // New import for email/password signup
+            signInWithEmailAndPassword,     // New import for email/password signin
+            signOut                         // New import for signout
+        } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration
@@ -39,9 +47,25 @@
         // Authenticate user
         onAuthStateChanged(auth, async (user) => {
             const addEvidenceBtn = document.getElementById('addEvidenceBtn');
+            const authStatusDisplay = document.getElementById('authStatusDisplay');
+            const emailAuthSection = document.getElementById('emailAuthSection');
+            const logoutButton = document.getElementById('logoutButton');
+
             if (user) {
                 userId = user.uid;
                 console.log("Authenticated with Firebase. User ID:", userId);
+                
+                // Display user info
+                if (user.isAnonymous) {
+                    authStatusDisplay.textContent = `Signed in as: Anonymous (${userId.substring(0, 8)}...)`;
+                    emailAuthSection.classList.remove('hidden'); // Show email auth for upgrade option
+                    logoutButton.classList.add('hidden'); // Hide logout for anonymous
+                } else {
+                    authStatusDisplay.textContent = `Signed in as: ${user.email} (${userId.substring(0, 8)}...)`;
+                    emailAuthSection.classList.add('hidden'); // Hide email auth inputs if logged in
+                    logoutButton.classList.remove('hidden'); // Show logout for email/password user
+                }
+
                 document.getElementById('currentUserIdDisplay').textContent = `Your User ID: ${userId.substring(0, 8)}...`;
                 
                 // Fetch user points
@@ -66,9 +90,15 @@
                     } else {
                         await signInAnonymously(auth);
                     }
+                    authStatusDisplay.textContent = `Signed in as: Anonymous (Loading...)`;
+                    emailAuthSection.classList.remove('hidden'); // Show email auth for anonymous users
+                    logoutButton.classList.add('hidden'); // Hide logout for anonymous
                 } catch (error) {
                     console.error("Error during Firebase authentication:", error);
                     document.getElementById('currentUserIdDisplay').textContent = "Authentication Error";
+                    authStatusDisplay.textContent = "Authentication Error";
+                    emailAuthSection.classList.remove('hidden'); // Ensure inputs are visible for manual login
+                    logoutButton.classList.add('hidden');
                     if (addEvidenceBtn) {
                         addEvidenceBtn.disabled = true; // Keep button disabled on error
                     }
@@ -77,6 +107,12 @@
             // Make userId and userPoints globally available after authentication
             window.currentUserId = userId;
             window.userPoints = userPoints;
+            // Expose auth functions globally for use in event listeners
+            window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+            window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+            window.signOut = signOut;
+            window.authInstance = auth; // Expose auth instance
+
             // Initialize Firestore listener after authentication
             setupCommunityContributionsListener(db, appId);
             setupLeaderboardListener(db, appId); // Setup leaderboard listener
@@ -188,11 +224,9 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            /* Removed dark mode transition here */
         }
         h1, h2 {
             font-family: 'Playfair Display', serif;
-            /* Removed dark mode transition here */
         }
         /* Ensure all elements have rounded corners - slightly less pronounced for newspaper feel */
         * {
@@ -205,7 +239,6 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Softer shadow */
             margin-bottom: 2rem;
             border: 1px solid #d3d3d3; /* Light gray border for definition */
-            /* Removed dark mode transition here */
         }
         /* Style for interactive elements like buttons */
         .btn {
@@ -251,11 +284,11 @@
             box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2); /* Soft gray glow */
         }
         /* Input styling */
-        input[type="text"], input[type="file"] {
+        input[type="text"], input[type="file"], input[type="email"], input[type="password"] {
             border: 1px solid #b0b0b0;
             transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
         }
-        input[type="text"]:focus, input[type="file"]:focus {
+        input[type="text"]:focus, input[type="file"]:focus, input[type="email"]:focus, input[type="password"]:focus {
             border-color: #888;
             box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2);
         }
@@ -378,11 +411,10 @@
             <p class="text-xl text-gray-600 max-w-2xl mx-auto">
                 Uncovering the facts, one story at a time. Your trusted source for clarity in a complex world.
             </p>
-            <!-- Dark Mode Toggle - Removed -->
         </header>
 
         <!-- Main Content Grid -->
-        <main class="grid grid-cols-1 lg:col-span-3 gap-8">
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Left Column: Input and Core Detection -->
             <div class="lg:col-span-2">
                 <!-- Input Area -->
@@ -426,6 +458,19 @@
 
             <!-- Right Column: Contextual Verification & Engagement -->
             <div class="lg:col-span-1">
+                <!-- User Authentication Section -->
+                <section class="card">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">User Authentication</h2>
+                    <p id="authStatusDisplay" class="text-lg text-gray-700 mb-4">Signed in as: Anonymous (Loading...)</p>
+                    <div id="emailAuthSection">
+                        <input type="email" id="emailInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Email">
+                        <input type="password" id="passwordInput" class="w-full p-3 border border-gray-300 focus:outline-none focus:ring-0 mb-3" placeholder="Password">
+                        <button id="signUpBtn" class="btn btn-primary w-full mb-2">Sign Up</button>
+                        <button id="signInBtn" class="btn btn-secondary w-full">Sign In</button>
+                    </div>
+                    <button id="logoutButton" class="btn btn-secondary w-full mt-4 hidden">Log Out</button>
+                </section>
+
                 <!-- Source & Sentiment Navigator -->
                 <section class="card">
                     <h2 class="text-3xl font-bold text-gray-800 mb-6 hover-effect-text">Source & Sentiment Navigator</h2>
@@ -499,15 +544,15 @@
                             </div>
                         </div>
                     </div>
+                    <div id="communityContributions" class="bg-gray-50 p-4 text-gray-700 border mb-6">
+                        <!-- Community contributions will be loaded here -->
+                        <p class="text-gray-500">Community contributions and evidence will be displayed here.</p>
+                    </div>
                     <div class="mb-5">
                         <p class="text-xl font-semibold text-gray-700 mb-2">Top Contributors (Leaderboard):</p>
                         <div id="leaderboardList" class="bg-gray-50 p-4 text-gray-700 border">
                             <p class="text-gray-500">Loading leaderboard...</p>
                         </div>
-                    </div>
-                    <div id="communityContributions" class="bg-gray-50 p-4 text-gray-700 border mb-6">
-                        <!-- Community contributions will be loaded here -->
-                        <p class="text-gray-500">Community contributions and evidence will be displayed here.</p>
                     </div>
                     <div class="mt-6">
                         <h3 class="text-xl font-semibold text-gray-700 mb-3 hover-effect-text">Add Your Evidence:</h3>
@@ -1040,54 +1085,44 @@
             }
         });
 
-        // Dark Mode Logic - Removed
-        /*
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        const sunIcon = document.getElementById('sunIcon');
-        const moonIcon = document.getElementById('moonIcon');
-
-        // Check for saved theme preference or system preference
-        const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
-        const currentTheme = localStorage.getItem('theme');
-
-        function applyTheme(theme) {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-            } else {
-                document.documentElement.classList.remove('dark');
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
+        // Email/Password Authentication Logic
+        document.getElementById('signUpBtn').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            try {
+                // Use the globally exposed auth instance and function
+                await window.createUserWithEmailAndPassword(window.authInstance, email, password);
+                showMessageBox('Account created successfully! You are now logged in.');
+            } catch (error) {
+                console.error("Error signing up:", error);
+                showMessageBox(`Error signing up: ${error.message}`);
             }
-        }
-
-        // Apply initial theme
-        if (currentTheme) {
-            applyTheme(currentTheme);
-        } else if (prefersDarkScheme.matches) {
-            applyTheme('dark');
-        } else {
-            applyTheme('light');
-        }
-
-        // Toggle theme on button click
-        darkModeToggle.addEventListener('click', () => {
-            let theme = 'light';
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
-                theme = 'light';
-            } else {
-                document.documentElement.classList.add('dark');
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-                theme = 'dark';
-            }
-            localStorage.setItem('theme', theme);
         });
-        */
+
+        document.getElementById('signInBtn').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            try {
+                // Use the globally exposed auth instance and function
+                await window.signInWithEmailAndPassword(window.authInstance, email, password);
+                showMessageBox('Signed in successfully!');
+            } catch (error) {
+                console.error("Error signing in:", error);
+                showMessageBox(`Error signing in: ${error.message}`);
+            }
+        });
+
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            try {
+                // Use the globally exposed auth instance and function
+                await window.signOut(window.authInstance);
+                showMessageBox('Logged out successfully.');
+                // After logout, Firebase's onAuthStateChanged will trigger and sign in anonymously again
+            } catch (error) {
+                console.error("Error logging out:", error);
+                showMessageBox(`Error logging out: ${error.message}`);
+            }
+        });
     </script>
 </body>
 </html>
