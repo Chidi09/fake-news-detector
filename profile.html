@@ -124,7 +124,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration (MUST BE THE SAME AS app.html and auth.html)
         const firebaseConfig = {
@@ -162,9 +162,9 @@
         }
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
+            if (user && !user.isAnonymous) { // Only proceed if user is logged in and NOT anonymous
                 // User is signed in. Fetch and display profile data.
-                profileEmail.textContent = user.email || 'N/A (Anonymous)';
+                profileEmail.textContent = user.email; // Display email for non-anonymous users
                 profileUserId.textContent = user.uid;
 
                 // Fetch user points from their profile document
@@ -219,8 +219,8 @@
                 });
 
             } else {
-                // User is not signed in. Redirect to auth.html.
-                console.log("User not authenticated on profile.html. Redirecting to auth.html");
+                // User is not signed in or is anonymous. Redirect to auth.html.
+                console.log("User not authenticated or is anonymous on profile.html. Redirecting to auth.html");
                 if (window.location.pathname !== '/auth.html' && window.location.pathname !== '/auth') {
                     window.location.href = 'auth.html';
                 }

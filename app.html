@@ -48,6 +48,7 @@
             const authStatusDisplay = document.getElementById('authStatusDisplay');
             const logoutButton = document.getElementById('logoutButton');
             const myProfileLink = document.getElementById('myProfileLink');
+            const personalizedNewsLink = document.getElementById('personalizedNewsLink'); // New element
             const anonymousContributionMessage = document.getElementById('anonymousContributionMessage');
 
             if (user) {
@@ -59,6 +60,7 @@
                     authStatusDisplay.textContent = `Signed in as: Anonymous`;
                     logoutButton.classList.add('hidden'); // Hide logout for anonymous
                     myProfileLink.classList.add('hidden'); // Hide profile link for anonymous
+                    personalizedNewsLink.classList.add('hidden'); // Hide personalized news for anonymous
                     addEvidenceBtn.disabled = true; // Disable contribution for anonymous
                     anonymousContributionMessage.classList.remove('hidden'); // Show message
                     // If anonymous, redirect to auth page to encourage sign-up
@@ -69,6 +71,7 @@
                     authStatusDisplay.textContent = `Signed in as: ${user.email}`;
                     logoutButton.classList.remove('hidden'); // Show logout button for logged-in users
                     myProfileLink.classList.remove('hidden'); // Show profile link for logged-in users
+                    personalizedNewsLink.classList.remove('hidden'); // Show personalized news for logged-in users
                     addEvidenceBtn.disabled = false; // Enable contribution for authenticated users
                     anonymousContributionMessage.classList.add('hidden'); // Hide message
                 }
@@ -97,6 +100,7 @@
                 authStatusDisplay.textContent = "Not signed in. Redirecting...";
                 logoutButton.classList.add('hidden'); // Hide logout if not signed in
                 myProfileLink.classList.add('hidden'); // Hide profile link if not signed in
+                personalizedNewsLink.classList.add('hidden'); // Hide personalized news for anonymous
             }
             // Make userId and userPoints globally available after authentication
             window.currentUserId = userId;
@@ -402,10 +406,11 @@
             <p class="text-xl text-gray-600 max-w-2xl mx-auto">
                 Uncovering the facts, one story at a time. Your trusted source for clarity in a complex world.
             </p>
-            <!-- Authentication Status, My Profile Link, and Logout Button -->
+            <!-- Authentication Status, My Profile Link, Personalized News Link, and Logout Button -->
             <div class="absolute top-0 right-0 text-right text-sm text-gray-700 flex flex-col items-end">
                 <p id="authStatusDisplay" class="font-semibold"></p>
                 <a href="profile.html" id="myProfileLink" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">My Profile</a>
+                <a href="personalized-news.html" id="personalizedNewsLink" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">Personalized News</a>
                 <button id="logoutButton" class="btn btn-secondary text-xs py-1 px-2 mt-1 hidden">Log Out</button>
             </div>
         </header>
