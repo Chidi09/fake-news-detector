@@ -191,10 +191,16 @@
         // Function to extract keywords/topics from analyzed articles using Gemini API
         async function extractKeywordsFromArticles(articles) {
             if (!articles || articles.length === 0) {
+                console.warn("No articles provided for keyword extraction.");
                 return [];
             }
 
             const combinedText = articles.map(a => a.text).join('\n\n');
+            if (combinedText.trim().length === 0) {
+                console.warn("Combined text for keyword extraction is empty.");
+                return [];
+            }
+
             let chatHistory = [];
             chatHistory.push({ role: "user", parts: [{ text: `Extract the top 5-10 most prominent keywords or topics from the following combined news article texts. Focus on general subjects rather than specific events or names, suitable for personalizing a news feed. Return them as a comma-separated list.
 
@@ -204,7 +210,8 @@
             "${combinedText}"` }] });
 
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyB-hrO6-Ht9pdDlQ97YeuqYVMnQVljI_U8"; // YOUR_GEMINI_API_KEY_HERE
+            // Set apiKey to an empty string to let the Canvas environment inject it
+            const apiKey = ""; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             try {
@@ -217,6 +224,8 @@
                 if (!response.ok) {
                     const errorBody = await response.json();
                     console.error('Gemini API HTTP Error (Keywords):', response.status, errorBody);
+                    console.error('Gemini API Error Details (Keywords):', errorBody);
+                    showMessageBox(`Error extracting keywords: ${errorBody.error?.message || 'API request failed.'}`);
                     return [];
                 }
 
@@ -225,13 +234,16 @@
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
                     const keywordsString = result.candidates[0].content.parts[0].text;
+                    console.log("Raw Keywords from Gemini:", keywordsString); // Log raw response
                     return keywordsString.split(',').map(kw => kw.trim()).filter(kw => kw.length > 0);
                 } else {
                     console.error('Gemini API response structure unexpected (Keywords):', result);
+                    showMessageBox('Error: Could not get keywords from AI. Unexpected response structure.');
                     return [];
                 }
             } catch (error) {
                 console.error('Error calling Gemini API (Keywords):', error);
+                showMessageBox(`Error: Failed to connect to AI keyword extraction service. ${error.message}`);
                 return [];
             }
         }
@@ -307,7 +319,7 @@
 
                     // Extract keywords/topics from analyzed articles
                     const topics = await extractKeywordsFromArticles(analyzedArticles);
-                    console.log("Inferred Topics:", topics);
+                    console.log("Inferred Topics:", topics); // Log the final inferred topics
 
                     // Fetch and display personalized news based on topics
                     const newsByTopic = await fetchPersonalizedNews(topics);
